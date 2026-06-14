@@ -41,7 +41,7 @@ export function AppSidebar({ currentPage = "worker-profiles", onNavigate }: AppS
                   onClick={() => onNavigate?.("root-cause-analysis")}
                 >
                   <GitBranch className="h-4 w-4" />
-                  <span>Root Cause Analysis</span>
+                  <span>Interactive Fault Tree</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

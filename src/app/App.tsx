@@ -316,9 +316,9 @@ export default function App() {
       case "work-orders":
         return "Work Orders";
       case "root-cause-analysis":
-        return "Root Cause Analysis";
+        return "Interactive Fault Tree";
       default:
-        if (currentPage.startsWith("rcfa-canvas-")) return "RCFA Canvas";
+        if (currentPage.startsWith("rcfa-canvas-")) return "Fault Tree Editor";
         return "CMMS";
     }
   };
