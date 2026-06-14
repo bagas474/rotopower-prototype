@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
-import { Plus, AlertTriangle, CheckCircle2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Plus, AlertTriangle, CheckCircle2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Filter, Edit, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -65,6 +65,7 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
   const [selectedRole, setSelectedRole] = useState("0");
   const [addShiftDialogOpen, setAddShiftDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
 
   const [shifts, setShifts] = useState<Shift[]>([
     {
@@ -146,6 +147,37 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
     return { met: missingRequirements.length === 0, missingRequirements };
   };
 
+  const checkFatigueViolations = (shift: Shift): { violations: string[]; workersWithViolations: number[] } => {
+    const violations: string[] = [];
+    const workersWithViolations: number[] = [];
+    const shiftDate = new Date(shift.shift_date);
+
+    for (const workerId of shift.assigned_workers) {
+      const worker = workers.find(w => w.id === workerId);
+      if (!worker) continue;
+
+      for (const otherShift of shifts) {
+        if (otherShift.id === shift.id || !otherShift.assigned_workers.includes(workerId)) continue;
+
+        const otherDate = new Date(otherShift.shift_date);
+        const dayDifference = Math.abs((shiftDate.getTime() - otherDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Check rest period violations (minimum 12 hours rest required)
+        if (dayDifference <= 1) {
+          if (otherShift.shift_time === "NIGHT" && shift.shift_time === "MORNING") {
+            violations.push(`Rest Period Violation: ${worker.display_name} cannot work MORNING after NIGHT shift.`);
+            workersWithViolations.push(workerId);
+          } else if (shift.shift_time === "NIGHT" && otherShift.shift_time === "MORNING") {
+            violations.push(`Rest Period Violation: ${worker.display_name} cannot work NIGHT after MORNING shift on consecutive days.`);
+            workersWithViolations.push(workerId);
+          }
+        }
+      }
+    }
+
+    return { violations, workersWithViolations: [...new Set(workersWithViolations)] };
+  };
+
   const getWorkerName = (workerId: number): string => {
     return workers.find(w => w.id === workerId)?.display_name || "Unknown";
   };
@@ -178,7 +210,19 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
 
   const handleAddShiftClick = (date: Date) => {
     setSelectedDate(date);
+    setEditingShift(null);
     setAddShiftDialogOpen(true);
+  };
+
+  const handleEditShift = (shift: Shift) => {
+    setEditingShift(shift);
+    setAddShiftDialogOpen(true);
+  };
+
+  const handleDeleteShift = (shiftId: number) => {
+    if (confirm("Are you sure you want to delete this shift?")) {
+      setShifts(shifts.filter(s => s.id !== shiftId));
+    }
   };
 
   const getShiftsForDate = (date: Date): Shift[] => {
@@ -209,12 +253,16 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
 
         <AddShiftDialog
           open={addShiftDialogOpen}
-          onOpenChange={setAddShiftDialogOpen}
+          onOpenChange={(open) => {
+            setAddShiftDialogOpen(open);
+            if (!open) setEditingShift(null);
+          }}
           onAdd={handleAddShift}
           workers={workers}
           workerCompetencies={workerCompetencies}
           existingShifts={shifts}
           preselectedDate={selectedDate}
+          editingShift={editingShift}
         />
       </div>
     );
@@ -315,31 +363,57 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
                     ) : (
                       dayShifts.map(shift => {
                         const validation = checkCompetencyRequirements(shift);
+                        const fatigue = checkFatigueViolations(shift);
                         const hasNoWorkers = shift.assigned_workers.length === 0;
+                        const hasFatigueViolations = fatigue.violations.length > 0;
 
                         return (
                           <div
                             key={shift.id}
-                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            className={`p-3 rounded-lg border-2 transition-all group relative ${
                               hasNoWorkers
                                 ? "border-orange-500 bg-orange-50 animate-pulse"
+                                : hasFatigueViolations
+                                ? "border-red-300 bg-red-50 hover:border-red-400"
                                 : validation.met
                                 ? "border-green-200 bg-green-50 hover:border-green-300"
                                 : "border-yellow-200 bg-yellow-50 hover:border-yellow-300"
                             }`}
                           >
                             <div className="space-y-2">
+                              {/* Edit/Delete Buttons (Hover) */}
+                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleEditShift(shift)}
+                                  className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+                                  aria-label="Edit shift"
+                                  title="Edit shift"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteShift(shift.id)}
+                                  className="p-1 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
+                                  aria-label="Delete shift"
+                                  title="Delete shift"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
                               <div className="flex items-center justify-between">
                                 <Badge variant="outline" className={getShiftTimeBadgeColor(shift.shift_time)}>
                                   {shift.shift_time}
                                 </Badge>
-                                {validation.met && !hasNoWorkers && (
+                                {hasFatigueViolations && (
+                                  <AlertTriangle className="h-4 w-4 text-red-600 animate-shake" />
+                                )}
+                                {validation.met && !hasNoWorkers && !hasFatigueViolations && (
                                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                                 )}
-                                {!validation.met && !hasNoWorkers && (
+                                {!validation.met && !hasNoWorkers && !hasFatigueViolations && (
                                   <AlertTriangle className="h-4 w-4 text-yellow-600" />
                                 )}
-                                {hasNoWorkers && (
+                                {hasNoWorkers && !hasFatigueViolations && (
                                   <AlertTriangle className="h-4 w-4 text-orange-600" />
                                 )}
                               </div>
@@ -349,25 +423,50 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
                               ) : (
                                 <TooltipProvider>
                                   <div className="space-y-1">
-                                    {shift.assigned_workers.map(workerId => (
-                                      <Tooltip key={workerId}>
-                                        <TooltipTrigger asChild>
-                                          <div className="text-xs font-medium text-slate-700 truncate cursor-help">
-                                            • {getWorkerName(workerId)}
-                                          </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p className="font-medium mb-1">{getWorkerName(workerId)}</p>
-                                          <p className="text-xs text-slate-500">Top Skills:</p>
-                                          <p className="text-xs">{getWorkerTopSkills(workerId)}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ))}
+                                    {shift.assigned_workers.map(workerId => {
+                                      const hasFatigueIssue = fatigue.workersWithViolations.includes(workerId);
+                                      return (
+                                        <Tooltip key={workerId}>
+                                          <TooltipTrigger asChild>
+                                            <div className={`text-xs font-medium truncate cursor-help ${
+                                              hasFatigueIssue ? "text-red-600" : "text-slate-700"
+                                            }`}>
+                                              • {getWorkerName(workerId)}
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="font-medium mb-1">{getWorkerName(workerId)}</p>
+                                            <p className="text-xs text-slate-500">Top Skills:</p>
+                                            <p className="text-xs">{getWorkerTopSkills(workerId)}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      );
+                                    })}
                                   </div>
                                 </TooltipProvider>
                               )}
 
-                              {!validation.met && !hasNoWorkers && (
+                              {hasFatigueViolations && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="text-xs text-red-700 font-medium cursor-help">
+                                        Rest period violation
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="font-medium mb-1 text-red-600">⚠ Fatigue Issue:</p>
+                                      <ul className="text-xs space-y-1">
+                                        {fatigue.violations.map((violation, i) => (
+                                          <li key={i}>• {violation}</li>
+                                        ))}
+                                      </ul>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+
+                              {!validation.met && !hasNoWorkers && !hasFatigueViolations && (
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -410,12 +509,16 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
 
       <AddShiftDialog
         open={addShiftDialogOpen}
-        onOpenChange={setAddShiftDialogOpen}
+        onOpenChange={(open) => {
+          setAddShiftDialogOpen(open);
+          if (!open) setEditingShift(null);
+        }}
         onAdd={handleAddShift}
         workers={workers}
         workerCompetencies={workerCompetencies}
         existingShifts={shifts}
         preselectedDate={selectedDate}
+        editingShift={editingShift}
       />
     </div>
   );

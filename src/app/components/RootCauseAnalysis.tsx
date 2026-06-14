@@ -288,7 +288,7 @@ function LinkedWOsPanel({
             onClick={() => onInvestigate(record.id)}
             className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors"
           >
-            <GitBranch className="h-4 w-4" /> Open Fault Tree Canvas
+            <GitBranch className="h-4 w-4" /> Edit Fault Tree
           </button>
         </div>
       </motion.div>
@@ -383,8 +383,8 @@ export function RootCauseAnalysis({ isAdmin = true, onInvestigate }: RootCauseAn
       <div className="bg-white border-b px-6 py-4 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">Root Cause Analysis</h1>
-            <p className="text-sm text-slate-500 mt-0.5">RCFA investigations and fault tree mapping</p>
+            <h1 className="text-xl font-semibold text-slate-900">Interactive Fault Tree</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Root cause analysis investigations and fault tree mapping</p>
           </div>
           {isAdmin && (
             <button
