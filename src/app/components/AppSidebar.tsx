@@ -72,20 +72,20 @@ export function AppSidebar({ currentPage = "worker-profiles", onNavigate }: AppS
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={currentPage === "shift-roster"}
-                  onClick={() => onNavigate?.("shift-roster")}
-                >
-                  <Calendar className="h-4 w-4" />
-                  <span>Shift Roster</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
                   isActive={currentPage === "worker-profiles"}
                   onClick={() => onNavigate?.("worker-profiles")}
                 >
                   <Users className="h-4 w-4" />
                   <span>Worker Profiles</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "shift-roster"}
+                  onClick={() => onNavigate?.("shift-roster")}
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span>Shift Roster</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
