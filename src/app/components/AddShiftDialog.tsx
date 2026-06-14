@@ -6,11 +6,9 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
-import { AlertCircle, CheckCircle2, Calendar as CalendarIcon, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, X } from "lucide-react";
 import { Shift, ShiftTime, ShiftRequirement } from "./ShiftRosterCalendar";
 import { Worker, UserCompetence } from "../types";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Calendar } from "./ui/calendar";
 
 interface AddShiftDialogProps {
   open: boolean;
@@ -150,7 +148,6 @@ export function AddShiftDialog({
   };
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
-    console.log("Date selected:", selectedDate);
     setDate(selectedDate);
     if (selectedDate) {
       setCalendarOpen(false);
@@ -183,27 +180,22 @@ export function AddShiftDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date-picker">Shift Date</Label>
-              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date-picker"
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                    type="button"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : <span className="text-slate-500">Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start" side="bottom">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={handleDateSelect}
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  />
-                </PopoverContent>
-              </Popover>
+              <input
+                id="date-picker"
+                type="date"
+                value={date ? format(date, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const [year, month, day] = e.target.value.split("-");
+                    const selectedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                    setDate(selectedDate);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="text-xs text-slate-500">
+                {date ? format(date, "PPP") : "Select a date"}
+              </p>
             </div>
 
             <div className="space-y-2">
