@@ -6,7 +6,7 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
-import { AlertCircle, CheckCircle2, Calendar as CalendarIcon } from "lucide-react";
+import { AlertCircle, CheckCircle2, Calendar as CalendarIcon, X } from "lucide-react";
 import { Shift, ShiftTime, ShiftRequirement } from "./ShiftRosterCalendar";
 import { Worker, UserCompetence } from "../types";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -20,6 +20,7 @@ interface AddShiftDialogProps {
   workerCompetencies: Record<number, UserCompetence[]>;
   existingShifts: Shift[];
   preselectedDate?: Date | null;
+  editingShift?: Shift | null;
 }
 
 const availableRequirements = [
@@ -32,20 +33,31 @@ const availableRequirements = [
   { id: 11, name: "Process Control", defaultLevel: 9 }
 ];
 
-export function AddShiftDialog({ open, onOpenChange, onAdd, workers, workerCompetencies, existingShifts, preselectedDate }: AddShiftDialogProps) {
-  const [date, setDate] = useState<Date | undefined>(preselectedDate || undefined);
+export function AddShiftDialog({ 
+  open, 
+  onOpenChange, 
+  onAdd, 
+  workers, 
+  workerCompetencies, 
+  existingShifts, 
+  preselectedDate,
+  editingShift
+}: AddShiftDialogProps) {
+  const isEditMode = !!editingShift;
+  
+  const [date, setDate] = useState<Date | undefined>(editingShift?.shift_date ? new Date(editingShift.shift_date) : preselectedDate || undefined);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [shiftTime, setShiftTime] = useState<ShiftTime>("MORNING");
-  const [selectedRequirement, setSelectedRequirement] = useState<number | null>(null);
-  const [selectedWorkers, setSelectedWorkers] = useState<number[]>([]);
+  const [shiftTime, setShiftTime] = useState<ShiftTime>(editingShift?.shift_time || "MORNING");
+  const [selectedRequirement, setSelectedRequirement] = useState<number | null>(editingShift?.requirements[0]?.competence_id || null);
+  const [selectedWorkers, setSelectedWorkers] = useState<number[]>(editingShift?.assigned_workers || []);
   const [errors, setErrors] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
 
   useEffect(() => {
-    if (preselectedDate) {
+    if (preselectedDate && !isEditMode) {
       setDate(preselectedDate);
     }
-  }, [preselectedDate]);
+  }, [preselectedDate, isEditMode]);
 
   const requirements: ShiftRequirement[] = selectedRequirement
     ? [{
@@ -159,9 +171,11 @@ export function AddShiftDialog({ open, onOpenChange, onAdd, workers, workerCompe
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Shift</DialogTitle>
+          <DialogTitle>{isEditMode ? "Edit Shift Assignment" : "Add New Shift"}</DialogTitle>
           <DialogDescription>
-            Create a new shift and assign workers. The system will validate competency requirements and rest periods.
+            {isEditMode 
+              ? "Modify the shift details and worker assignments. The system will validate competency requirements and rest periods."
+              : "Create a new shift and assign workers. The system will validate competency requirements and rest periods."}
           </DialogDescription>
         </DialogHeader>
 
@@ -272,52 +286,94 @@ export function AddShiftDialog({ open, onOpenChange, onAdd, workers, workerCompe
             </div>
           </div>
 
+          {selectedWorkers.length > 0 && (
+            <div className="space-y-2">
+              <Label>Assigned Workers List</Label>
+              <div className="border rounded-lg p-3 space-y-2 bg-slate-50">
+                {selectedWorkers.map(workerId => {
+                  const worker = workers.find(w => w.id === workerId);
+                  if (!worker) return null;
+                  
+                  return (
+                    <div
+                      key={workerId}
+                      className="flex items-center justify-between p-2 bg-white rounded border border-slate-200"
+                    >
+                      <div>
+                        <p className="font-medium text-sm text-slate-900">{worker.display_name}</p>
+                        <p className="text-xs text-slate-500">{worker.employee_no}</p>
+                      </div>
+                      <button
+                        onClick={() => toggleWorker(workerId)}
+                        className="p-1 hover:bg-red-50 rounded transition-colors"
+                        aria-label="Remove worker"
+                      >
+                        <X className="h-4 w-4 text-slate-600 hover:text-red-600" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500">
+                {selectedWorkers.length} worker{selectedWorkers.length !== 1 ? 's' : ''} assigned
+              </p>
+            </div>
+          )}
+
           {/* Validation Banner */}
-          {selectedWorkers.length > 0 && requirements.length > 0 && (
-            <Alert className={hasAllRequirementsMet ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
-              {hasAllRequirementsMet ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">
-                    <strong>All Competencies Met:</strong> All shift requirements are satisfied by the assigned workers.
+          {selectedWorkers.length > 0 && (
+            <div className="space-y-2">
+              {requirements.length > 0 && (
+                <Alert className={hasAllRequirementsMet ? "border-green-300 bg-green-50" : "border-yellow-300 bg-yellow-50"}>
+                  {hasAllRequirementsMet ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-green-800">
+                        <strong>All Competencies Met:</strong> All shift requirements are satisfied by the assigned workers.
+                      </AlertDescription>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertDescription className="text-yellow-800">
+                        <strong>Requirements Not Met:</strong> Some competency requirements are missing.
+                      </AlertDescription>
+                    </>
+                  )}
+                </Alert>
+              )}
+
+              {errors.length > 0 && (
+                <Alert variant="destructive" className="border-red-300 bg-red-50 text-red-900">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Validation Errors:</strong>
+                    <ul className="space-y-1 text-sm mt-2">
+                      {errors.map((error, i) => (
+                        <li key={i}>• {error}</li>
+                      ))}
+                    </ul>
                   </AlertDescription>
-                </>
-              ) : (
-                <>
+                </Alert>
+              )}
+
+              {warnings.length > 0 && errors.length === 0 && (
+                <Alert variant="default" className="border-yellow-300 bg-yellow-50">
                   <AlertCircle className="h-4 w-4 text-yellow-600" />
                   <AlertDescription className="text-yellow-800">
-                    <strong>Requirements Not Met:</strong> Some competency requirements are missing.
+                    <strong>Warnings:</strong>
+                    <ul className="space-y-1 text-sm mt-2">
+                      {warnings.map((warning, i) => (
+                        <li key={i}>• {warning}</li>
+                      ))}
+                    </ul>
                   </AlertDescription>
-                </>
+                </Alert>
               )}
-            </Alert>
+            </div>
           )}
 
-          {warnings.length > 0 && (
-            <Alert variant="default" className="border-yellow-200 bg-yellow-50">
-              <AlertCircle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-yellow-800">
-                <ul className="space-y-1 text-sm">
-                  {warnings.map((warning, i) => (
-                    <li key={i}>• {warning}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
 
-          {errors.length > 0 && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <ul className="space-y-1 text-sm">
-                  {errors.map((error, i) => (
-                    <li key={i}>• {error}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
         </div>
 
         <DialogFooter>

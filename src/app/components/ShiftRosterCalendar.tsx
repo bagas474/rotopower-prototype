@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
-import { Plus, AlertTriangle, CheckCircle2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Plus, AlertTriangle, CheckCircle2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Filter, Edit, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -65,7 +65,7 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
   const [selectedRole, setSelectedRole] = useState("0");
   const [addShiftDialogOpen, setAddShiftDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
 
   const [shifts, setShifts] = useState<Shift[]>([
     {
@@ -210,7 +210,19 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
 
   const handleAddShiftClick = (date: Date) => {
     setSelectedDate(date);
+    setEditingShift(null);
     setAddShiftDialogOpen(true);
+  };
+
+  const handleEditShift = (shift: Shift) => {
+    setEditingShift(shift);
+    setAddShiftDialogOpen(true);
+  };
+
+  const handleDeleteShift = (shiftId: number) => {
+    if (confirm("Are you sure you want to delete this shift?")) {
+      setShifts(shifts.filter(s => s.id !== shiftId));
+    }
   };
 
   const getShiftsForDate = (date: Date): Shift[] => {
@@ -241,12 +253,16 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
 
         <AddShiftDialog
           open={addShiftDialogOpen}
-          onOpenChange={setAddShiftDialogOpen}
+          onOpenChange={(open) => {
+            setAddShiftDialogOpen(open);
+            if (!open) setEditingShift(null);
+          }}
           onAdd={handleAddShift}
           workers={workers}
           workerCompetencies={workerCompetencies}
           existingShifts={shifts}
           preselectedDate={selectedDate}
+          editingShift={editingShift}
         />
       </div>
     );
@@ -354,7 +370,7 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
                         return (
                           <div
                             key={shift.id}
-                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            className={`p-3 rounded-lg border-2 transition-all group relative ${
                               hasNoWorkers
                                 ? "border-orange-500 bg-orange-50 animate-pulse"
                                 : hasFatigueViolations
@@ -365,6 +381,25 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
                             }`}
                           >
                             <div className="space-y-2">
+                              {/* Edit/Delete Buttons (Hover) */}
+                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleEditShift(shift)}
+                                  className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+                                  aria-label="Edit shift"
+                                  title="Edit shift"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteShift(shift.id)}
+                                  className="p-1 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
+                                  aria-label="Delete shift"
+                                  title="Delete shift"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
                               <div className="flex items-center justify-between">
                                 <Badge variant="outline" className={getShiftTimeBadgeColor(shift.shift_time)}>
                                   {shift.shift_time}
@@ -474,12 +509,16 @@ export function ShiftRosterCalendar({ workers, workerCompetencies }: ShiftRoster
 
       <AddShiftDialog
         open={addShiftDialogOpen}
-        onOpenChange={setAddShiftDialogOpen}
+        onOpenChange={(open) => {
+          setAddShiftDialogOpen(open);
+          if (!open) setEditingShift(null);
+        }}
         onAdd={handleAddShift}
         workers={workers}
         workerCompetencies={workerCompetencies}
         existingShifts={shifts}
         preselectedDate={selectedDate}
+        editingShift={editingShift}
       />
     </div>
   );
