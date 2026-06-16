@@ -1,13 +1,10 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Database, Zap } from "lucide-react";
+import { Database } from "lucide-react";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { AssetHierarchyTree, TreeNode } from "./AssetHierarchyTree";
 
-interface SensorNode {
-  id: string;
-  name: string;
-  type: "location" | "asset" | "sensor";
-  children?: SensorNode[];
+interface SensorNode extends TreeNode {
   sensorData?: {
     timestamp: string;
     value: number;
@@ -27,25 +24,34 @@ interface TelemetryDashboardProps {
 const mockAssetHierarchy: SensorNode[] = [
   {
     id: "loc1",
+    code: "PLTU1",
     name: "Suralaya Plant (PLTU1)",
     type: "location",
     children: [
       {
         id: "asset1",
+        code: "BLR-01",
         name: "Boiler Unit 1",
         type: "asset",
+        status: "running",
         children: [
           {
             id: "sensor1",
+            code: "VIB-BFP-01A",
             name: "VIB-BFP-01A (Vibration)",
             type: "sensor",
+            sensorType: "vibration",
+            thresholds: { normal: 2.5, upper: 5.0 },
             sensorData: generateSensorData("vibration", 24),
             forecastData: generateForecastData("vibration", 24)
           },
           {
             id: "sensor2",
+            code: "TEMP-FWH-01",
             name: "TEMP-FWH-01 (Temperature)",
             type: "sensor",
+            sensorType: "temperature",
+            thresholds: { normal: 70, upper: 90 },
             sensorData: generateSensorData("temperature", 24),
             forecastData: generateForecastData("temperature", 24)
           }
@@ -53,20 +59,28 @@ const mockAssetHierarchy: SensorNode[] = [
       },
       {
         id: "asset2",
+        code: "HX-01",
         name: "Heat Exchanger HX-01",
         type: "asset",
+        status: "running",
         children: [
           {
             id: "sensor3",
+            code: "TEMP-HX-01A",
             name: "TEMP-HX-01A (Inlet)",
             type: "sensor",
+            sensorType: "temperature",
+            thresholds: { normal: 65, upper: 85 },
             sensorData: generateSensorData("temperature", 24),
             forecastData: generateForecastData("temperature", 24)
           },
           {
             id: "sensor4",
+            code: "TEMP-HX-01B",
             name: "TEMP-HX-01B (Outlet)",
             type: "sensor",
+            sensorType: "temperature",
+            thresholds: { normal: 60, upper: 80 },
             sensorData: generateSensorData("temperature", 24),
             forecastData: generateForecastData("temperature", 24)
           }
@@ -76,18 +90,24 @@ const mockAssetHierarchy: SensorNode[] = [
   },
   {
     id: "loc2",
+    code: "PLTU2",
     name: "Tarahan Plant (PLTU2)",
     type: "location",
     children: [
       {
         id: "asset3",
+        code: "TRB-01",
         name: "Turbine Unit 1",
         type: "asset",
+        status: "tripped",
         children: [
           {
             id: "sensor5",
+            code: "VIB-TRB-01",
             name: "VIB-TRB-01 (Vibration)",
             type: "sensor",
+            sensorType: "vibration",
+            thresholds: { normal: 3.0, upper: 6.0 },
             sensorData: generateSensorData("vibration", 24),
             forecastData: generateForecastData("vibration", 24)
           }
@@ -129,72 +149,7 @@ function generateForecastData(type: string, hours: number) {
   return data;
 }
 
-function AssetTreeNode({
-  node,
-  level = 0,
-  onSelectSensor
-}: {
-  node: SensorNode;
-  level?: number;
-  onSelectSensor: (node: SensorNode) => void;
-}) {
-  const [expanded, setExpanded] = useState(level < 2);
-  const hasChildren = node.children && node.children.length > 0;
-  const isSensor = node.type === "sensor";
 
-  return (
-    <div>
-      <div
-        className={`flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-slate-100 cursor-pointer ${
-          isSensor ? "ml-4" : ""
-        } ${level > 0 ? "ml-" + level * 2 : ""}`}
-        style={{ marginLeft: `${level * 12}px` }}
-      >
-        {hasChildren && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="p-0.5 hover:bg-slate-200 rounded"
-          >
-            {expanded ? (
-              <ChevronDown className="h-3 w-3 text-slate-600" />
-            ) : (
-              <ChevronRight className="h-3 w-3 text-slate-600" />
-            )}
-          </button>
-        )}
-        {!hasChildren && <div className="w-4" />}
-
-        {isSensor ? (
-          <Zap className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-        ) : (
-          <Database className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
-        )}
-
-        <button
-          onClick={() => isSensor && onSelectSensor(node)}
-          className={`text-xs font-medium flex-1 text-left truncate ${
-            isSensor ? "text-slate-900 hover:text-blue-700" : "text-slate-700"
-          }`}
-        >
-          {node.name}
-        </button>
-      </div>
-
-      {hasChildren && expanded && (
-        <div>
-          {node.children!.map(child => (
-            <AssetTreeNode
-              key={child.id}
-              node={child}
-              level={level + 1}
-              onSelectSensor={onSelectSensor}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function TimeSeriesChart({ sensor }: { sensor: SensorNode }) {
   const chartData = sensor.sensorData || [];
@@ -361,19 +316,17 @@ export function TelemetryDashboard({ isAdmin = false }: TelemetryDashboardProps)
       {/* Main Content - Split Pane */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Pane: Asset Hierarchy Tree (25%) */}
-        <div className="w-1/4 border-r bg-white overflow-y-auto shrink-0">
-          <div className="p-4">
-            <h2 className="text-xs font-semibold text-slate-600 mb-2 uppercase">Asset Hierarchy</h2>
-            <div className="space-y-0">
-              {mockAssetHierarchy.map(location => (
-                <AssetTreeNode
-                  key={location.id}
-                  node={location}
-                  onSelectSensor={setSelectedSensor}
-                />
-              ))}
-            </div>
-          </div>
+        <div className="w-1/4 border-r bg-white shrink-0">
+          <AssetHierarchyTree
+            data={mockAssetHierarchy}
+            depth="sensor"
+            onSelectNode={(node) => {
+              if (node.type === "sensor") {
+                setSelectedSensor(node as SensorNode);
+              }
+            }}
+            selectedNodeId={selectedSensor?.id}
+          />
         </div>
 
         {/* Right Pane: Charts Container (75%) */}
