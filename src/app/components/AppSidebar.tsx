@@ -1,4 +1,4 @@
-import { Users, Wrench, Calendar, Package, Shield, Award, Briefcase, GitBranch, ClipboardList } from "lucide-react";
+import { Users, Wrench, Calendar, Package, Shield, Award, Briefcase, GitBranch, ClipboardList, Activity, AlertCircle, Brain } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +31,41 @@ export function AppSidebar({ currentPage = "worker-profiles", onNavigate }: AppS
         </div>
       </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Condition Monitoring</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "telemetry-dashboard"}
+                  onClick={() => onNavigate?.("telemetry-dashboard")}
+                >
+                  <Activity className="h-4 w-4" />
+                  <span>Telemetry Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "anomaly-alert-center"}
+                  onClick={() => onNavigate?.("anomaly-alert-center")}
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Anomaly Alert Center</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "ml-model-studio"}
+                  onClick={() => onNavigate?.("ml-model-studio")}
+                >
+                  <Brain className="h-4 w-4" />
+                  <span>ML Model Studio</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Work Execution</SidebarGroupLabel>
           <SidebarGroupContent>
