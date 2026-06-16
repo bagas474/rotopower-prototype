@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { AlertCircle, Brain } from "lucide-react";
 import { RootCauseAnalysis } from "./components/RootCauseAnalysis";
 import { RCFACanvas } from "./components/RCFACanvas";
 import { WorkOrders } from "./components/WorkOrders";
@@ -8,6 +9,7 @@ import { MROInventory } from "./components/MROInventory";
 import { UsersRoles } from "./components/UsersRoles";
 import { ManageCompetencies } from "./components/ManageCompetencies";
 import { RoleRequirementsMenu, RoleCompetenceRequirement } from "./components/RoleRequirementsMenu";
+import { TelemetryDashboard } from "./components/TelemetryDashboard";
 import { AppSidebar } from "./components/AppSidebar";
 import { TopNavigation, Region, Site, GlobalContext } from "./components/TopNavigation";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "./components/ui/sidebar";
@@ -317,6 +319,12 @@ export default function App() {
         return "Work Orders";
       case "root-cause-analysis":
         return "Interactive Fault Tree";
+      case "telemetry-dashboard":
+        return "Telemetry Dashboard";
+      case "anomaly-alert-center":
+        return "Anomaly Alert Center";
+      case "ml-model-studio":
+        return "ML Model Studio";
       default:
         if (currentPage.startsWith("rcfa-canvas-")) return "Fault Tree Editor";
         return "CMMS";
@@ -401,6 +409,24 @@ export default function App() {
                 isAdmin={currentUser.is_admin}
                 onViewRCA={(faultTreeId) => setCurrentPage(`rcfa-canvas-${faultTreeId}`)}
               />
+            </div>
+          ) : currentPage === "telemetry-dashboard" ? (
+            <div className="flex-1 h-full overflow-hidden">
+              <TelemetryDashboard isAdmin={currentUser.is_admin} />
+            </div>
+          ) : currentPage === "anomaly-alert-center" ? (
+            <div className="flex-1 h-full overflow-hidden flex items-center justify-center bg-slate-50">
+              <div className="text-center">
+                <AlertCircle className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 font-medium">Anomaly Alert Center (Coming Soon)</p>
+              </div>
+            </div>
+          ) : currentPage === "ml-model-studio" ? (
+            <div className="flex-1 h-full overflow-hidden flex items-center justify-center bg-slate-50">
+              <div className="text-center">
+                <Brain className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 font-medium">ML Model Studio (Coming Soon)</p>
+              </div>
             </div>
           ) : currentPage === "root-cause-analysis" ? (
             <div className="flex-1 h-full overflow-hidden">
