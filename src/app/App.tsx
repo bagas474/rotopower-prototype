@@ -10,6 +10,7 @@ import { UsersRoles } from "./components/UsersRoles";
 import { ManageCompetencies } from "./components/ManageCompetencies";
 import { RoleRequirementsMenu, RoleCompetenceRequirement } from "./components/RoleRequirementsMenu";
 import { TelemetryDashboard } from "./components/TelemetryDashboard";
+import { AnomalyAlertCenter } from "./components/AnomalyAlertCenter";
 import { AppSidebar } from "./components/AppSidebar";
 import { TopNavigation, Region, Site, GlobalContext } from "./components/TopNavigation";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "./components/ui/sidebar";
@@ -415,11 +416,8 @@ export default function App() {
               <TelemetryDashboard isAdmin={currentUser.is_admin} />
             </div>
           ) : currentPage === "anomaly-alert-center" ? (
-            <div className="flex-1 h-full overflow-hidden flex items-center justify-center bg-slate-50">
-              <div className="text-center">
-                <AlertCircle className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500 font-medium">Anomaly Alert Center (Coming Soon)</p>
-              </div>
+            <div className="flex-1 h-full overflow-hidden">
+              <AnomalyAlertCenter isAdmin={currentUser.is_admin} />
             </div>
           ) : currentPage === "ml-model-studio" ? (
             <div className="flex-1 h-full overflow-hidden flex items-center justify-center bg-slate-50">
