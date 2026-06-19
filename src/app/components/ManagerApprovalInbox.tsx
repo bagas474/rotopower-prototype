@@ -75,7 +75,7 @@ export function ManagerApprovalInbox({ workOrders, onApprove, onReject }: Manage
               {approvalPendingWOs.map(wo => (
                 <button
                   key={wo.id}
-                  onClick={() => handleSelectWO(wo)}
+                  onClick={() => setSelectedWO(wo)}
                   className={`w-full p-4 border-b text-left transition-colors hover:bg-slate-50 ${
                     selectedWO?.id === wo.id ? "bg-blue-50 border-l-4 border-l-blue-500" : ""
                   }`}
