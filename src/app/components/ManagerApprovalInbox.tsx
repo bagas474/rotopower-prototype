@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Check, X, AlertCircle } from "lucide-react";
+import { Check, X, AlertCircle, Clock, MapPin, User } from "lucide-react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { WorkOrderDrawer } from "./WorkOrderDrawer";
 import { toast } from "sonner";
 import { WorkOrder } from "../data/mockData";
 
@@ -14,7 +13,6 @@ interface ManagerApprovalInboxProps {
 
 export function ManagerApprovalInbox({ workOrders, onApprove, onReject }: ManagerApprovalInboxProps) {
   const [selectedWO, setSelectedWO] = useState<WorkOrder | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Filter only draft and pending_planner work orders (awaiting manager approval)
   const approvalPendingWOs = workOrders.filter(
@@ -24,20 +22,13 @@ export function ManagerApprovalInbox({ workOrders, onApprove, onReject }: Manage
   const handleApprove = (id: number) => {
     onApprove(id);
     toast.success("Work order approved successfully");
-    setDrawerOpen(false);
     setSelectedWO(null);
   };
 
   const handleReject = (id: number) => {
     onReject(id);
     toast.success("Work order rejected");
-    setDrawerOpen(false);
     setSelectedWO(null);
-  };
-
-  const handleSelectWO = (wo: WorkOrder) => {
-    setSelectedWO(wo);
-    setDrawerOpen(true);
   };
 
   const priorityColor: Record<number, string> = {
@@ -205,15 +196,7 @@ export function ManagerApprovalInbox({ workOrders, onApprove, onReject }: Manage
         )}
       </div>
 
-      {/* Drawer for full details if needed */}
-      {selectedWO && drawerOpen && (
-        <WorkOrderDrawer
-          workOrder={selectedWO}
-          isOpen={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          isReadOnly={false}
-        />
-      )}
+
     </div>
   );
 }
