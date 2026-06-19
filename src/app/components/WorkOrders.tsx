@@ -17,6 +17,7 @@ import {
 } from "../data/mockData";
 import { WorkOrderKanban, COLUMNS } from "./WorkOrderKanban";
 import { WorkOrderDrawer } from "./WorkOrderDrawer";
+import { ManagerApprovalInbox } from "./ManagerApprovalInbox";
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
@@ -328,7 +329,7 @@ export function WorkOrders({ isAdmin = true, onViewRCA }: WorkOrdersProps) {
   const [assignments,  setAssignments]  = useState<WorkActionAssignment[]>(mockWorkActionAssignments);
   const [woMaterials,  setWOMaterials]  = useState<WorkActionMaterial[]>(mockWorkActionMaterials);
 
-  const [viewMode,  setViewMode]  = useState<"kanban"|"list">("kanban");
+  const [viewMode,  setViewMode]  = useState<"kanban"|"list"|"approval">("kanban");
   const [showCreate, setShowCreate] = useState(false);
   const [drawerWO,  setDrawerWO]  = useState<WorkOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -363,6 +364,16 @@ export function WorkOrders({ isAdmin = true, onViewRCA }: WorkOrdersProps) {
 
   const handleStatusChange = (id: number, status: WOStatus, cancelReason?: string) => {
     handleMove(id, status, cancelReason);
+  };
+
+  const handleApproveWO = (id: number) => {
+    handleMove(id, "planned");
+    toast.success(`Work Order #${id} approved and moved to Planned`);
+  };
+
+  const handleRejectWO = (id: number) => {
+    handleMove(id, "cancelled", "Rejected during manager review");
+    toast.error(`Work Order #${id} rejected`);
   };
 
   const counts = COLUMNS.reduce((acc, c) => {
@@ -406,6 +417,12 @@ export function WorkOrders({ isAdmin = true, onViewRCA }: WorkOrdersProps) {
                   className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${viewMode === "list" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-50"}`}>
                   <List className="h-3.5 w-3.5" /> List
                 </button>
+                {isAdmin && (
+                  <button onClick={() => setViewMode("approval")}
+                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-l border-slate-200 ${viewMode === "approval" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-50"}`}>
+                    <FileText className="h-3.5 w-3.5" /> Approval Inbox
+                  </button>
+                )}
               </div>
               {isAdmin && (
                 <button onClick={() => setShowCreate(true)}
@@ -432,11 +449,17 @@ export function WorkOrders({ isAdmin = true, onViewRCA }: WorkOrdersProps) {
         <div className="flex-1 overflow-hidden flex flex-col">
           {viewMode === "kanban" ? (
             <WorkOrderKanban
-              workOrders={workOrders}
+              workOrders={workOrders.filter(wo => wo.status !== "draft")}
               allAssignments={allAssignmentsForKanban}
               onMove={handleMove}
               onOpen={setDrawerWO}
               isLoading={isLoading}
+            />
+          ) : viewMode === "approval" ? (
+            <ManagerApprovalInbox
+              workOrders={workOrders}
+              onApprove={handleApproveWO}
+              onReject={handleRejectWO}
             />
           ) : (
             <WorkOrderList workOrders={workOrders} onOpen={setDrawerWO} />
