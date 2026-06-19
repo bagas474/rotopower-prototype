@@ -4,24 +4,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { WorkOrderDrawer } from "./WorkOrderDrawer";
 import { toast } from "sonner";
-
-interface WorkOrder {
-  id: number;
-  code: string;
-  title: string;
-  description: string;
-  asset_id: number;
-  asset_name: string;
-  status: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED";
-  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-  estimated_hours: number;
-  assigned_to: number | null;
-  created_by: number;
-  created_at: string;
-  material_ids?: number[];
-  required_competencies?: string[];
-  rca_id?: number;
-}
+import { WorkOrder } from "../data/mockData";
 
 interface ManagerApprovalInboxProps {
   workOrders: WorkOrder[];
@@ -33,9 +16,9 @@ export function ManagerApprovalInbox({ workOrders, onApprove, onReject }: Manage
   const [selectedWO, setSelectedWO] = useState<WorkOrder | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Filter only draft and pending approval work orders
+  // Filter only draft and pending_planner work orders (awaiting manager approval)
   const approvalPendingWOs = workOrders.filter(
-    wo => wo.status === "DRAFT" || wo.status === "PENDING_APPROVAL"
+    wo => wo.status === "draft" || wo.status === "pending_planner"
   );
 
   const handleApprove = (id: number) => {
@@ -57,20 +40,25 @@ export function ManagerApprovalInbox({ workOrders, onApprove, onReject }: Manage
     setDrawerOpen(true);
   };
 
-  const priorityColor = {
-    LOW: "bg-blue-100 text-blue-800",
-    MEDIUM: "bg-yellow-100 text-yellow-800",
-    HIGH: "bg-orange-100 text-orange-800",
-    CRITICAL: "bg-red-100 text-red-800"
+  const priorityColor: Record<number, string> = {
+    1: "bg-red-100 text-red-800",      // HIGH
+    2: "bg-orange-100 text-orange-800", // MEDIUM
+    3: "bg-blue-100 text-blue-800"      // LOW
   };
 
-  const statusColor = {
-    DRAFT: "bg-slate-100 text-slate-700",
-    PENDING_APPROVAL: "bg-purple-100 text-purple-700",
-    APPROVED: "bg-green-100 text-green-700",
-    IN_PROGRESS: "bg-blue-100 text-blue-700",
-    COMPLETED: "bg-emerald-100 text-emerald-700",
-    REJECTED: "bg-red-100 text-red-700"
+  const statusColor: Record<string, string> = {
+    draft: "bg-slate-100 text-slate-700",
+    pending_planner: "bg-purple-100 text-purple-700",
+    planned: "bg-green-100 text-green-700",
+    in_progress: "bg-blue-100 text-blue-700",
+    completed: "bg-emerald-100 text-emerald-700",
+    cancelled: "bg-red-100 text-red-700"
+  };
+
+  const priorityLabel: Record<number, string> = {
+    1: "HIGH",
+    2: "MEDIUM",
+    3: "LOW"
   };
 
   return (
@@ -103,16 +91,16 @@ export function ManagerApprovalInbox({ workOrders, onApprove, onReject }: Manage
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div>
-                      <p className="font-medium text-sm text-slate-900">{wo.code}</p>
+                      <p className="font-medium text-sm text-slate-900">WO-{wo.id}</p>
                       <p className="text-xs text-slate-600 truncate">{wo.title}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className={`text-xs ${priorityColor[wo.priority]}`}>
-                      {wo.priority}
+                      {priorityLabel[wo.priority]}
                     </Badge>
                     <Badge variant="outline" className={`text-xs ${statusColor[wo.status]}`}>
-                      {wo.status.replace("_", " ")}
+                      {wo.status.replace(/_/g, " ").toUpperCase()}
                     </Badge>
                   </div>
                   <p className="text-xs text-slate-500 mt-2">{wo.asset_name}</p>
@@ -131,11 +119,11 @@ export function ManagerApprovalInbox({ workOrders, onApprove, onReject }: Manage
             <div className="border-b p-4 bg-slate-50 shrink-0">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-semibold text-slate-900">{selectedWO.code}: {selectedWO.title}</h3>
+                  <h3 className="font-semibold text-slate-900">WO-{selectedWO.id}: {selectedWO.title}</h3>
                   <p className="text-sm text-slate-600 mt-1">{selectedWO.asset_name}</p>
                 </div>
                 <Badge className={statusColor[selectedWO.status]}>
-                  {selectedWO.status.replace("_", " ")}
+                  {selectedWO.status.replace(/_/g, " ").toUpperCase()}
                 </Badge>
               </div>
             </div>
@@ -153,48 +141,40 @@ export function ManagerApprovalInbox({ workOrders, onApprove, onReject }: Manage
                 <div>
                   <p className="text-xs font-medium text-slate-500 uppercase mb-1">Priority</p>
                   <Badge className={priorityColor[selectedWO.priority]}>
-                    {selectedWO.priority}
+                    {priorityLabel[selectedWO.priority]}
                   </Badge>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase mb-1">Estimated Hours</p>
-                  <p className="text-sm font-medium text-slate-900">{selectedWO.estimated_hours}h</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase mb-1">Location</p>
+                  <p className="text-sm font-medium text-slate-900">{selectedWO.location_name}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase mb-1">Created</p>
-                  <p className="text-sm text-slate-600">{new Date(selectedWO.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase mb-1">Planned Start</p>
+                  <p className="text-sm text-slate-600">{new Date(selectedWO.planned_start).toLocaleDateString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase mb-1">Asset</p>
-                  <p className="text-sm font-medium text-slate-900">{selectedWO.asset_name}</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase mb-1">Planned End</p>
+                  <p className="text-sm text-slate-600">{new Date(selectedWO.planned_end).toLocaleDateString()}</p>
                 </div>
               </div>
 
-              {/* Required Competencies */}
-              {selectedWO.required_competencies && selectedWO.required_competencies.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-900 mb-2">Required Competencies</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedWO.required_competencies.map(comp => (
-                      <Badge key={comp} variant="outline" className="text-xs">
-                        {comp}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* RCA Link */}
-              {selectedWO.rca_id && (
+              {selectedWO.asset_fault_id && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
                     <p className="text-sm text-blue-700">
-                      Linked to RCA Investigation #{selectedWO.rca_id}
+                      Linked to Asset Fault #{selectedWO.asset_fault_id}
                     </p>
                   </div>
                 </div>
               )}
+
+              {/* Created By */}
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase mb-1">Created By</p>
+                <p className="text-sm font-medium text-slate-900">{selectedWO.created_by}</p>
+              </div>
             </div>
 
             {/* Action Buttons */}
