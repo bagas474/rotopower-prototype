@@ -98,20 +98,20 @@ export function AppSidebar({ currentPage = "worker-profiles", onNavigate }: AppS
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={currentPage === "root-cause-analysis" || currentPage?.startsWith("rcfa-canvas")}
-                  onClick={() => onNavigate?.("root-cause-analysis")}
-                >
-                  <GitBranch className="h-4 w-4" />
-                  <span>Interactive Fault Tree</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
                   isActive={currentPage === "work-orders"}
                   onClick={() => onNavigate?.("work-orders")}
                 >
                   <ClipboardList className="h-4 w-4" />
                   <span>Work Orders</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "root-cause-analysis" || currentPage?.startsWith("rcfa-canvas")}
+                  onClick={() => onNavigate?.("root-cause-analysis")}
+                >
+                  <GitBranch className="h-4 w-4" />
+                  <span>Root Cause Analysis</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

@@ -322,7 +322,7 @@ export default function App() {
       case "work-orders":
         return "Work Orders";
       case "root-cause-analysis":
-        return "Interactive Fault Tree";
+        return "Root Cause Analysis";
       case "telemetry-dashboard":
         return "Telemetry Dashboard";
       case "anomaly-alert-center":
