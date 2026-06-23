@@ -7,12 +7,10 @@ import { WorkOrder, WOStatus, WorkActionAssignment } from "../data/mockData";
 const ITEM_TYPE = "WORK_ORDER";
 
 export const COLUMNS: { status: WOStatus; label: string; color: string; bg: string; accent: string }[] = [
-  { status: "draft",           label: "Draft",           color: "text-slate-600",  bg: "bg-slate-50",   accent: "bg-slate-400"  },
-  { status: "pending_planner", label: "Pending Planner", color: "text-violet-700", bg: "bg-violet-50",  accent: "bg-violet-500" },
-  { status: "planned",         label: "Planned",         color: "text-blue-700",   bg: "bg-blue-50",    accent: "bg-blue-500"   },
-  { status: "in_progress",     label: "In Progress",     color: "text-amber-700",  bg: "bg-amber-50",   accent: "bg-amber-500"  },
-  { status: "completed",       label: "Completed",       color: "text-green-700",  bg: "bg-green-50",   accent: "bg-green-500"  },
-  { status: "cancelled",       label: "Cancelled",       color: "text-red-600",    bg: "bg-red-50",     accent: "bg-red-400"    },
+  { status: "pending",     label: "Pending",     color: "text-slate-600", bg: "bg-slate-50",  accent: "bg-slate-400"  },
+  { status: "in_progress", label: "In Progress", color: "text-amber-700", bg: "bg-amber-50",  accent: "bg-amber-500"  },
+  { status: "parked",      label: "Parked",      color: "text-violet-700",bg: "bg-violet-50", accent: "bg-violet-500" },
+  { status: "completed",   label: "Completed",   color: "text-green-700", bg: "bg-green-50",  accent: "bg-green-500"  },
 ];
 
 const PRIORITY_CFG: Record<number, { label: string; cls: string }> = {
@@ -170,7 +168,7 @@ function KanbanColumn({
           ${isEmpty ? "border-2 border-dashed border-slate-200" : ""}`}
       >
         {isLoading ? (
-          <><SkeletonCard />{(col.status === "draft" || col.status === "in_progress") && <SkeletonCard />}</>
+          <><SkeletonCard />{(col.status === "pending" || col.status === "in_progress") && <SkeletonCard />}</>
         ) : isEmpty ? (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-300 py-6">
             <FileText className="h-7 w-7 mb-1.5 opacity-40"/><p className="text-xs">Drop here</p>

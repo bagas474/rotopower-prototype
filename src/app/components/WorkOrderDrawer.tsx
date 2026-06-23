@@ -3,14 +3,14 @@ import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import {
   X, GitBranch, Wrench, MapPin, Clock, User, Plus, Trash2,
-  CheckSquare, Square, ChevronDown, ChevronRight, GripVertical,
-  Package, AlertCircle, Pencil, Check, Users,
+  CheckSquare, ChevronDown, ChevronRight,
+  Package, AlertCircle, Check, Users, MessageSquare, Send,
 } from "lucide-react";
 import {
   WorkOrder, WOStatus, WOPriority,
-  WorkAction, WorkActionStatus, WorkTask,
-  WorkActionAssignment, WorkActionMaterial,
-  mockFaultTrees, mockUsers,
+  WorkAction, WorkActionStatus, WorkTask, WorkTaskStatus,
+  WorkActionAssignment, WorkActionMaterial, WorkOrderComment,
+  mockFaultTrees, mockUsers, mockWorkOrderComments,
 } from "../data/mockData";
 
 // ─── Config ────────────────────────────────────────────────────────────────────
@@ -22,23 +22,31 @@ const PRIORITY_CFG: Record<WOPriority, { label: string; cls: string }> = {
 };
 
 const STATUS_CFG: Record<WOStatus, { label: string; cls: string }> = {
-  draft:           { label: "Draft",           cls: "bg-slate-100 text-slate-600"   },
-  pending_planner: { label: "Pending Planner", cls: "bg-violet-100 text-violet-700" },
-  planned:         { label: "Planned",         cls: "bg-blue-100 text-blue-700"     },
-  in_progress:     { label: "In Progress",     cls: "bg-amber-100 text-amber-700"   },
-  completed:       { label: "Completed",       cls: "bg-green-100 text-green-700"   },
-  cancelled:       { label: "Cancelled",       cls: "bg-red-100 text-red-600"       },
+  pending:     { label: "Pending",     cls: "bg-slate-100 text-slate-600"   },
+  in_progress: { label: "In Progress", cls: "bg-amber-100 text-amber-700"   },
+  parked:      { label: "Parked",      cls: "bg-violet-100 text-violet-700" },
+  completed:   { label: "Completed",   cls: "bg-green-100 text-green-700"   },
+  cancelled:   { label: "Cancelled",   cls: "bg-red-100 text-red-600"       },
 };
 
 const ACTION_STATUS_CFG: Record<WorkActionStatus, { label: string; cls: string }> = {
-  proposed: { label: "Proposed", cls: "bg-slate-100 text-slate-600" },
-  active:   { label: "Active",   cls: "bg-amber-100 text-amber-700" },
-  done:     { label: "Done",     cls: "bg-green-100 text-green-700" },
+  proposed:  { label: "Proposed", cls: "bg-slate-100 text-slate-600"   },
+  active:    { label: "Active",   cls: "bg-amber-100 text-amber-700"   },
+  "wont-do": { label: "Won't Do", cls: "bg-red-50 text-red-500"        },
+  done:      { label: "Done",     cls: "bg-green-100 text-green-700"   },
+};
+
+const TASK_STATUS_CFG: Record<WorkTaskStatus, { label: string; cls: string; dot: string }> = {
+  todo:        { label: "To Do",       cls: "bg-slate-100 text-slate-600",   dot: "bg-slate-400"  },
+  in_progress: { label: "In Progress", cls: "bg-amber-100 text-amber-700",   dot: "bg-amber-500"  },
+  blocked:     { label: "Blocked",     cls: "bg-red-100 text-red-600",       dot: "bg-red-500"    },
+  done:        { label: "Done",        cls: "bg-green-100 text-green-700",    dot: "bg-green-500"  },
+  cancelled:   { label: "Cancelled",   cls: "bg-slate-100 text-slate-400",   dot: "bg-slate-300"  },
 };
 
 const AVATAR_COLORS = ["bg-blue-500","bg-violet-500","bg-green-500","bg-amber-500","bg-rose-500"];
 
-const ALL_STATUSES: WOStatus[] = ["draft","pending_planner","planned","in_progress","completed","cancelled"];
+const ALL_STATUSES: WOStatus[] = ["pending","in_progress","parked","completed","cancelled"];
 
 function isReadOnly(status: WOStatus) {
   return status === "completed" || status === "cancelled";
@@ -51,17 +59,31 @@ type DrawerTab = "info" | "actions" | "materials" | "assignments";
 // ─── Info Tab ───────────────────────────────────────────────────────────────────
 
 function InfoTab({
-  wo, onStatusChange, onViewRCA, readOnly,
+  wo, onStatusChange, onViewRCA, readOnly, comments, onAddComment,
 }: {
   wo: WorkOrder;
   onStatusChange: (s: WOStatus) => void;
   onViewRCA?: () => void;
   readOnly: boolean;
+  comments: WorkOrderComment[];
+  onAddComment: (body: string) => void;
 }) {
   const pCfg = PRIORITY_CFG[wo.priority];
   const faultTree = wo.asset_fault_id
     ? mockFaultTrees.find(t => t.asset_fault_id === wo.asset_fault_id)
     : null;
+  const [draft, setDraft] = useState("");
+
+  const fmtTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
+  const submitComment = () => {
+    if (!draft.trim()) return;
+    onAddComment(draft.trim());
+    setDraft("");
+  };
 
   return (
     <div className="space-y-5">
@@ -169,9 +191,66 @@ function InfoTab({
       {/* Description */}
       <div>
         <label className="text-xs font-semibold text-slate-500 block mb-1.5">Description</label>
-        <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5">
+        <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5 whitespace-pre-wrap">
           {wo.description || <span className="text-slate-300 italic">No description</span>}
         </p>
+      </div>
+
+      {/* Activity & Comments */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="flex items-center gap-1.5 mb-3">
+          <MessageSquare className="h-4 w-4 text-slate-400" />
+          <span className="text-xs font-semibold text-slate-500">Activity &amp; Comments</span>
+          <span className="text-[10px] text-slate-400">({comments.length})</span>
+        </div>
+
+        {!readOnly && (
+          <div className="flex items-end gap-2 mb-4">
+            <textarea
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitComment(); }}
+              rows={2}
+              placeholder="Add a comment… (⌘/Ctrl + Enter to post)"
+              className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+            />
+            <button
+              onClick={submitComment}
+              disabled={!draft.trim()}
+              className="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label="Post comment"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {comments.length === 0 ? (
+          <p className="text-xs text-slate-300 italic">No activity yet.</p>
+        ) : (
+          <ol className="space-y-3">
+            {[...comments].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(c => (
+              <li key={c.id} className="flex gap-2.5">
+                {c.kind === "comment" ? (
+                  <div className={`h-7 w-7 rounded-full ${AVATAR_COLORS[c.id % AVATAR_COLORS.length]} flex items-center justify-center text-white text-[10px] font-bold shrink-0`}>
+                    {c.author_initials}
+                  </div>
+                ) : (
+                  <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                    {c.kind === "status" ? <Clock className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-slate-700">{c.author_name}</span>
+                    <span className="text-[10px] text-slate-400">{fmtTime(c.created_at)}</span>
+                  </div>
+                  <p className={`text-sm mt-0.5 ${c.kind === "comment" ? "text-slate-700" : "text-slate-500 italic"}`}>{c.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </div>
   );
@@ -182,7 +261,7 @@ function InfoTab({
 function ActionsTab({
   wo, actions, tasks,
   onAddAction, onDeleteAction, onUpdateActionStatus,
-  onAddTask, onToggleTask, onDeleteTask,
+  onAddTask, onTaskStatus, onDeleteTask,
   readOnly,
 }: {
   wo: WorkOrder;
@@ -192,7 +271,7 @@ function ActionsTab({
   onDeleteAction: (id: number) => void;
   onUpdateActionStatus: (id: number, status: WorkActionStatus) => void;
   onAddTask: (actionId: number, label: string) => void;
-  onToggleTask: (taskId: number) => void;
+  onTaskStatus: (taskId: number, status: WorkTaskStatus) => void;
   onDeleteTask: (taskId: number) => void;
   readOnly: boolean;
 }) {
@@ -260,7 +339,7 @@ function ActionsTab({
                     onClick={e => e.stopPropagation()}
                     className="text-[10px] border border-slate-200 rounded px-1.5 py-1 bg-white focus:outline-none"
                   >
-                    {(["proposed","active","done"] as WorkActionStatus[]).map(s => (
+                    {(["proposed","active","wont-do","done"] as WorkActionStatus[]).map(s => (
                       <option key={s} value={s}>{ACTION_STATUS_CFG[s].label}</option>
                     ))}
                   </select>
@@ -279,34 +358,47 @@ function ActionsTab({
                   transition={{ duration: 0.18 }} className="overflow-hidden"
                 >
                   <div className="px-4 py-2 space-y-1.5">
-                    {actionTasks.map(task => (
-                      <div key={task.id} className="flex items-start gap-2.5 group py-1">
-                        <button onClick={() => !readOnly && onToggleTask(task.id)} className="mt-0.5 shrink-0">
-                          {task.status === "done"
-                            ? <CheckSquare className="h-4 w-4 text-green-500" />
-                            : <Square className="h-4 w-4 text-slate-300 group-hover:text-slate-500" />}
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm ${task.status === "done" ? "line-through text-slate-400" : "text-slate-700"}`}>
-                            {task.label}
-                          </p>
-                          {task.description && (
-                            <p className="text-xs text-slate-400 mt-0.5">{task.description}</p>
+                    {actionTasks.map(task => {
+                      const tCfg = TASK_STATUS_CFG[task.status];
+                      const muted = task.status === "done" || task.status === "cancelled";
+                      return (
+                        <div key={task.id} className="flex items-start gap-2.5 group py-1">
+                          <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${tCfg.dot}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm ${muted ? "line-through text-slate-400" : "text-slate-700"}`}>
+                              {task.label}
+                            </p>
+                            {task.description && (
+                              <p className="text-xs text-slate-400 mt-0.5">{task.description}</p>
+                            )}
+                          </div>
+                          {!readOnly ? (
+                            <select
+                              value={task.status}
+                              onChange={e => onTaskStatus(task.id, e.target.value as WorkTaskStatus)}
+                              className={`text-[10px] font-semibold border-0 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-300 cursor-pointer ${tCfg.cls}`}
+                            >
+                              {(["todo","in_progress","blocked","done","cancelled"] as WorkTaskStatus[]).map(s => (
+                                <option key={s} value={s}>{TASK_STATUS_CFG[s].label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className={`text-[10px] font-semibold rounded px-1.5 py-1 ${tCfg.cls}`}>{tCfg.label}</span>
+                          )}
+                          {!readOnly && (
+                            <button onClick={() => onDeleteTask(task.id)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all">
+                              <Trash2 className="h-3 w-3" />
+                            </button>
                           )}
                         </div>
-                        {!readOnly && (
-                          <button onClick={() => onDeleteTask(task.id)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all">
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Add task inline */}
                     {!readOnly && (
                       addingTaskFor === action.id ? (
                         <div className="flex items-center gap-2 pt-1">
-                          <Square className="h-4 w-4 text-slate-200 shrink-0" />
+                          <span className="h-2 w-2 rounded-full bg-slate-200 shrink-0" />
                           <input
                             autoFocus
                             value={newTaskLabel}
@@ -537,6 +629,48 @@ function AssignmentsTab({
   );
 }
 
+// ─── Cancel Reason Modal ────────────────────────────────────────────────────────
+
+function CancelReasonModal({ wo, onConfirm, onClose }: { wo: WorkOrder; onConfirm: (reason: string) => void; onClose: () => void }) {
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  return (
+    <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-slate-800">Cancel Work Order</h2>
+            <p className="text-xs text-slate-400">WO #{wo.id} · {wo.asset_name}</p>
+          </div>
+        </div>
+        <p className="text-sm text-slate-600 mb-4">Provide a reason for cancellation. It will be appended to the work order description and the WO archived.</p>
+        <label className="text-xs font-medium text-slate-600 block mb-1.5">Reason for Cancellation <span className="text-red-500">*</span></label>
+        <textarea
+          value={reason} onChange={e => { setReason(e.target.value); setError(""); }}
+          rows={3} autoFocus placeholder="e.g. Equipment repaired by OEM under warranty…"
+          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none ${error ? "border-red-400" : "border-slate-200"}`}
+        />
+        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={onClose} className="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">Keep Open</button>
+          <button
+            onClick={() => { if (!reason.trim()) { setError("Reason is required."); return; } onConfirm(reason.trim()); }}
+            className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+          >Cancel WO</button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Main Drawer ────────────────────────────────────────────────────────────────
 
 export interface WorkOrderDrawerProps {
@@ -561,10 +695,50 @@ export function WorkOrderDrawer({
   onViewRCA,
 }: WorkOrderDrawerProps) {
   const [tab, setTab] = useState<DrawerTab>("info");
+  const [comments, setComments] = useState<WorkOrderComment[]>(
+    mockWorkOrderComments.filter(c => c.work_order_id === wo.id)
+  );
+  const [pendingCancel, setPendingCancel] = useState(false);
   const readOnly = isReadOnly(wo.status);
 
   const pCfg = PRIORITY_CFG[wo.priority];
   const sCfg = STATUS_CFG[wo.status];
+
+  // ── Status change (intercept cancellation) ──
+
+  const handleStatusSelect = (s: WOStatus) => {
+    if (s === "cancelled") { setPendingCancel(true); return; }
+    onStatusChange(wo.id, s);
+    setComments(c => [...c, {
+      id: Math.max(0, ...c.map(x => x.id)) + 1,
+      work_order_id: wo.id, kind: "status",
+      author_name: "You", author_initials: "ME",
+      body: `Moved status to ${STATUS_CFG[s].label}.`,
+      created_at: new Date().toISOString(),
+    }]);
+  };
+
+  const handleConfirmCancel = (reason: string) => {
+    onStatusChange(wo.id, "cancelled", reason);
+    setComments(c => [...c, {
+      id: Math.max(0, ...c.map(x => x.id)) + 1,
+      work_order_id: wo.id, kind: "status",
+      author_name: "You", author_initials: "ME",
+      body: `Cancelled work order. Reason: ${reason}`,
+      created_at: new Date().toISOString(),
+    }]);
+    setPendingCancel(false);
+  };
+
+  const handleAddComment = (body: string) => {
+    setComments(c => [...c, {
+      id: Math.max(0, ...c.map(x => x.id)) + 1,
+      work_order_id: wo.id, kind: "comment",
+      author_name: "You", author_initials: "ME",
+      body, created_at: new Date().toISOString(),
+    }]);
+    toast.success("Comment added");
+  };
 
   // ── Action handlers ──
 
@@ -605,9 +779,9 @@ export function WorkOrderDrawer({
     onUpdateTasks([...tasks, newTask]);
   };
 
-  const handleToggleTask = (taskId: number) => {
-    onUpdateTasks(tasks.map(t => t.id === taskId ? { ...t, status: t.status === "done" ? "todo" : "done" } : t));
-    toast.success("Task updated");
+  const handleTaskStatus = (taskId: number, status: WorkTaskStatus) => {
+    onUpdateTasks(tasks.map(t => t.id === taskId ? { ...t, status } : t));
+    toast.success(`Task marked ${status.replace("_", " ")}`);
   };
 
   const handleDeleteTask = (taskId: number) => {
@@ -717,9 +891,11 @@ export function WorkOrderDrawer({
           {tab === "info" && (
             <InfoTab
               wo={wo}
-              onStatusChange={s => onStatusChange(wo.id, s)}
+              onStatusChange={handleStatusSelect}
               onViewRCA={handleViewRCA}
               readOnly={readOnly}
+              comments={comments}
+              onAddComment={handleAddComment}
             />
           )}
           {tab === "actions" && (
@@ -729,7 +905,7 @@ export function WorkOrderDrawer({
               onDeleteAction={handleDeleteAction}
               onUpdateActionStatus={handleActionStatus}
               onAddTask={handleAddTask}
-              onToggleTask={handleToggleTask}
+              onTaskStatus={handleTaskStatus}
               onDeleteTask={handleDeleteTask}
               readOnly={readOnly}
             />
@@ -761,6 +937,17 @@ export function WorkOrderDrawer({
           </div>
         )}
       </motion.div>
+
+      {/* Cancel reason modal */}
+      <AnimatePresence>
+        {pendingCancel && (
+          <CancelReasonModal
+            wo={wo}
+            onConfirm={handleConfirmCancel}
+            onClose={() => setPendingCancel(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

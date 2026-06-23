@@ -357,10 +357,9 @@ export const mockMaterialBookings: MaterialBooking[] = [
 // ─── Work Orders ──────────────────────────────────────────────────────────────
 
 export type WOStatus =
-  | "draft"
-  | "pending_planner"
-  | "planned"
+  | "pending"
   | "in_progress"
+  | "parked"
   | "completed"
   | "cancelled";
 export type WOPriority = 1 | 2 | 3;
@@ -384,7 +383,7 @@ export interface WorkOrder {
   cancellation_reason?: string;
 }
 
-export type WorkActionStatus = "proposed" | "active" | "done";
+export type WorkActionStatus = "proposed" | "active" | "wont-do" | "done";
 
 export interface WorkAction {
   id: number;
@@ -395,10 +394,12 @@ export interface WorkAction {
   planned_shift_id: number | null;
 }
 
+export type WorkTaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
+
 export interface WorkTask {
   id: number;
   work_action_id: number;
-  status: "todo" | "done";
+  status: WorkTaskStatus;
   sequence: number;
   label: string;
   description: string;
@@ -423,6 +424,18 @@ export interface WorkActionMaterial {
   qty_requested: number;
   qty_issued: number | null;
   booked_at: string;
+}
+
+export type WorkOrderActivityKind = "comment" | "status" | "system";
+
+export interface WorkOrderComment {
+  id: number;
+  work_order_id: number;
+  kind: WorkOrderActivityKind;
+  author_name: string;
+  author_initials: string;
+  body: string;
+  created_at: string; // ISO timestamp
 }
 
 export interface AssetLocation {
@@ -503,7 +516,7 @@ export const mockWorkOrders: WorkOrder[] = [
     location_name: "Turbine Hall",
     title: "GT-01 vibration spike investigation",
     description: "Vibration sensor VIB-01 reading 12 mm/s RMS, above 10 mm/s alarm threshold. Inspect bearings.",
-    status: "pending_planner",
+    status: "pending",
     priority: 1,
     asset_fault_id: null,
     planned_start: "2024-05-23",
@@ -537,7 +550,7 @@ export const mockWorkOrders: WorkOrder[] = [
     location_name: "Cooling Tower",
     title: "CT-FAN-01 blade inspection",
     description: "Scheduled blade wear inspection. Last done 6 months ago.",
-    status: "planned",
+    status: "pending",
     priority: 2,
     asset_fault_id: null,
     planned_start: "2024-05-28",
@@ -554,7 +567,7 @@ export const mockWorkOrders: WorkOrder[] = [
     location_name: "Utility Systems",
     title: "M-305 overheating — replace cooling fan",
     description: "Motor winding temperature reaching 145°C (limit: 130°C). Cooling fin blocked with debris.",
-    status: "draft",
+    status: "pending",
     priority: 2,
     asset_fault_id: 61,
     planned_start: "2024-06-01",
@@ -589,7 +602,7 @@ export const mockWorkOrders: WorkOrder[] = [
     location_name: "Compressor Station",
     title: "HX-01 chemical cleaning",
     description: "Fouling reducing heat transfer efficiency by ~18%. Schedule chemical flush.",
-    status: "draft",
+    status: "pending",
     priority: 3,
     asset_fault_id: 90,
     planned_start: "2024-06-05",
@@ -623,8 +636,8 @@ export const mockWorkOrders: WorkOrder[] = [
     asset_name: "Forced Draft Fan",
     location_name: "Boiler House",
     title: "FD-FAN damper actuator replacement",
-    description: "Damper actuator not responding to control signals. Manual override in place.",
-    status: "pending_planner",
+    description: "Damper actuator not responding to control signals. Manual override in place. Parked pending OEM spare part delivery.",
+    status: "parked",
     priority: 2,
     asset_fault_id: null,
     planned_start: "2024-05-30",
@@ -641,7 +654,7 @@ export const mockWorkOrders: WorkOrder[] = [
     location_name: "Cooling Tower",
     title: "CWP-01 impeller wear check",
     description: "Flow rate 12% below design. Impeller erosion suspected.",
-    status: "draft",
+    status: "pending",
     priority: 3,
     asset_fault_id: null,
     planned_start: "2024-06-10",
@@ -658,7 +671,7 @@ export const mockWorkOrders: WorkOrder[] = [
     location_name: "Boiler House",
     title: "BFP-02 discharge valve maintenance",
     description: "Discharge check valve showing signs of wear. Leakage past valve seat detected during routine test.",
-    status: "pending_planner",
+    status: "pending",
     priority: 2,
     asset_fault_id: 68,
     planned_start: "2024-06-03",
@@ -675,7 +688,7 @@ export const mockWorkOrders: WorkOrder[] = [
     location_name: "Turbine Hall",
     title: "GEN-01 stator winding insulation test",
     description: "Preventive maintenance: Megohm test due per 5-year maintenance plan. Insulation resistance trending.",
-    status: "draft",
+    status: "pending",
     priority: 3,
     asset_fault_id: null,
     planned_start: "2024-06-08",
@@ -691,8 +704,8 @@ export const mockWorkOrders: WorkOrder[] = [
     asset_name: "Compressor C-202",
     location_name: "Compressor Station",
     title: "C-202 intercooler effectiveness test",
-    description: "Temperature differential between inlet and outlet below spec. Tubes may require cleaning or replacement.",
-    status: "pending_planner",
+    description: "Temperature differential between inlet and outlet below spec. Tubes may require cleaning or replacement. Parked awaiting unit shutdown window.",
+    status: "parked",
     priority: 1,
     asset_fault_id: 95,
     planned_start: "2024-06-01",
@@ -709,7 +722,7 @@ export const mockWorkOrders: WorkOrder[] = [
     location_name: "Boiler House",
     title: "ID-FAN speed controller calibration",
     description: "Speed controller feedback signal drifting. Calibration and adjustment needed to maintain proper furnace draft.",
-    status: "draft",
+    status: "pending",
     priority: 2,
     asset_fault_id: null,
     planned_start: "2024-06-05",
@@ -726,7 +739,7 @@ export const mockWorkOrders: WorkOrder[] = [
     location_name: "Cooling Tower",
     title: "CT-FAN-02 bearing lubrication",
     description: "Bearing temperature elevated to 68°C. Lubrication interval extended due to high ambient temperature.",
-    status: "draft",
+    status: "pending",
     priority: 2,
     asset_fault_id: null,
     planned_start: "2024-06-06",
@@ -743,7 +756,7 @@ export const mockWorkOrders: WorkOrder[] = [
     location_name: "Utility Systems",
     title: "P-101 suction strainer cleaning",
     description: "Differential pressure across suction strainer at 0.8 bar (limit: 0.5 bar). Strainer replacement scheduled.",
-    status: "pending_planner",
+    status: "pending",
     priority: 2,
     asset_fault_id: null,
     planned_start: "2024-06-04",
@@ -790,6 +803,15 @@ export const mockWorkActionMaterials: WorkActionMaterial[] = [
   { id: 401, work_action_id: 101, work_order_id: 2041, material_id: 5015, material_sku: "SEAL-KIT-A", material_name: "Pump Mechanical Seal Kit",   qty_requested: 1, qty_issued: null, booked_at: "2024-05-21" },
   { id: 402, work_action_id: 101, work_order_id: 2041, material_id: 5012, material_sku: "BRG-6204",   material_name: "Deep Groove Ball Bearing",    qty_requested: 2, qty_issued: null, booked_at: "2024-05-21" },
   { id: 403, work_action_id: 103, work_order_id: 2043, material_id: 5014, material_sku: "LUB-HD50",   material_name: "Heavy Duty Hydraulic Oil 5L", qty_requested: 3, qty_issued: 3,    booked_at: "2024-05-20" },
+];
+
+export const mockWorkOrderComments: WorkOrderComment[] = [
+  { id: 501, work_order_id: 2041, kind: "system",  author_name: "System",      author_initials: "SY", body: "Work order auto-generated from approved Failure Event FE-1187.", created_at: "2024-05-21T07:02:00" },
+  { id: 502, work_order_id: 2041, kind: "status",  author_name: "Sarah Chen",   author_initials: "SC", body: "Moved status to In Progress.", created_at: "2024-05-21T08:15:00" },
+  { id: 503, work_order_id: 2041, kind: "comment", author_name: "John Doe",     author_initials: "JD", body: "LOTO applied. Casing drained, starting seal removal now.", created_at: "2024-05-21T09:40:00" },
+  { id: 504, work_order_id: 2041, kind: "comment", author_name: "Michael Torres", author_initials: "MT", body: "Seal kit SEAL-KIT-A staged at the pump. Bearing also looks worn, recommend replacing while open.", created_at: "2024-05-21T10:25:00" },
+  { id: 505, work_order_id: 2043, kind: "system",  author_name: "System",      author_initials: "SY", body: "Work order auto-generated from approved Failure Event FE-1192.", created_at: "2024-05-20T06:30:00" },
+  { id: 506, work_order_id: 2043, kind: "comment", author_name: "Emily Watson", author_initials: "EW", body: "Anti-surge valve actuator confirmed faulty. Replacement bench-tested OK.", created_at: "2024-05-20T14:10:00" },
 ];
 
 // Role Competence Requirements by Role ID (Phase 1: Worker role only with ID = 1)
