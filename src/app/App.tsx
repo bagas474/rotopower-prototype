@@ -12,6 +12,7 @@ import { RoleRequirementsMenu, RoleCompetenceRequirement } from "./components/Ro
 import { TelemetryDashboard } from "./components/TelemetryDashboard";
 import { AnomalyAlertCenter } from "./components/AnomalyAlertCenter";
 import { MLModelStudio } from "./components/MLModelStudio";
+import { FailureDictionaryAdmin } from "./components/FailureDictionaryAdmin";
 import { AppSidebar } from "./components/AppSidebar";
 import { TopNavigation, Region, Site, GlobalContext } from "./components/TopNavigation";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "./components/ui/sidebar";
@@ -327,6 +328,8 @@ export default function App() {
         return "Anomaly Alert Center";
       case "ml-model-studio":
         return "ML Model Studio";
+      case "failure-dictionary-admin":
+        return "Failure Dictionary Admin";
       default:
         if (currentPage.startsWith("rcfa-canvas-")) return "Fault Tree Editor";
         return "CMMS";
@@ -423,6 +426,10 @@ export default function App() {
           ) : currentPage === "ml-model-studio" ? (
             <div className="flex-1 h-full overflow-hidden">
               <MLModelStudio isAdmin={currentUser.is_admin} />
+            </div>
+          ) : currentPage === "failure-dictionary-admin" ? (
+            <div className="flex-1 h-full overflow-hidden">
+              <FailureDictionaryAdmin />
             </div>
           ) : currentPage === "root-cause-analysis" ? (
             <div className="flex-1 h-full overflow-hidden">

@@ -1,4 +1,4 @@
-import { Users, Wrench, Calendar, Package, Shield, Award, Briefcase, GitBranch, ClipboardList, Activity, AlertCircle, Brain } from "lucide-react";
+import { Users, Wrench, Calendar, Package, Shield, Award, Briefcase, GitBranch, ClipboardList, Activity, AlertCircle, Brain, BookMarked } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +31,23 @@ export function AppSidebar({ currentPage = "worker-profiles", onNavigate }: AppS
         </div>
       </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Asset Management</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "failure-dictionary-admin"}
+                  onClick={() => onNavigate?.("failure-dictionary-admin")}
+                >
+                  <BookMarked className="h-4 w-4" />
+                  <span>Failure Dictionary Admin</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Condition Monitoring</SidebarGroupLabel>
           <SidebarGroupContent>
