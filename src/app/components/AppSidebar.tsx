@@ -1,4 +1,4 @@
-import { Users, Wrench, Calendar, Package, Shield, Award, Briefcase, GitBranch, ClipboardList, Activity, AlertCircle, Brain } from "lucide-react";
+import { Users, Wrench, Calendar, Package, Shield, Award, Briefcase, GitBranch, ClipboardList, Activity, AlertCircle, Brain, BookMarked, Inbox } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +31,23 @@ export function AppSidebar({ currentPage = "worker-profiles", onNavigate }: AppS
         </div>
       </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Asset Management</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "failure-dictionary-admin"}
+                  onClick={() => onNavigate?.("failure-dictionary-admin")}
+                >
+                  <BookMarked className="h-4 w-4" />
+                  <span>Failure Dictionary Admin</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Condition Monitoring</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -72,11 +89,11 @@ export function AppSidebar({ currentPage = "worker-profiles", onNavigate }: AppS
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={currentPage === "root-cause-analysis" || currentPage?.startsWith("rcfa-canvas")}
-                  onClick={() => onNavigate?.("root-cause-analysis")}
+                  isActive={currentPage === "failure-events"}
+                  onClick={() => onNavigate?.("failure-events")}
                 >
-                  <GitBranch className="h-4 w-4" />
-                  <span>Interactive Fault Tree</span>
+                  <Inbox className="h-4 w-4" />
+                  <span>Failure Events</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -86,6 +103,15 @@ export function AppSidebar({ currentPage = "worker-profiles", onNavigate }: AppS
                 >
                   <ClipboardList className="h-4 w-4" />
                   <span>Work Orders</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "root-cause-analysis" || currentPage?.startsWith("rcfa-canvas")}
+                  onClick={() => onNavigate?.("root-cause-analysis")}
+                >
+                  <GitBranch className="h-4 w-4" />
+                  <span>Root Cause Analysis</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
