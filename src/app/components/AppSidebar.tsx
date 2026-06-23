@@ -1,4 +1,4 @@
-import { Users, Wrench, Calendar, Package, Shield, Award, Briefcase, GitBranch, ClipboardList, Activity, AlertCircle, Brain, BookMarked } from "lucide-react";
+import { Users, Wrench, Calendar, Package, Shield, Award, Briefcase, GitBranch, ClipboardList, Activity, AlertCircle, Brain, BookMarked, Inbox } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -87,6 +87,15 @@ export function AppSidebar({ currentPage = "worker-profiles", onNavigate }: AppS
           <SidebarGroupLabel>Work Execution</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "failure-events"}
+                  onClick={() => onNavigate?.("failure-events")}
+                >
+                  <Inbox className="h-4 w-4" />
+                  <span>Failure Events</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={currentPage === "root-cause-analysis" || currentPage?.startsWith("rcfa-canvas")}
