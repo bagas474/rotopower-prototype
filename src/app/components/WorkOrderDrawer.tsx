@@ -54,24 +54,103 @@ function isReadOnly(status: WOStatus) {
 
 // ─── Tab types ──────────────────────────────────────────────────────────────────
 
-type DrawerTab = "info" | "actions" | "materials" | "assignments";
+type DrawerTab = "diagnosis" | "info" | "actions" | "materials" | "assignments";
+
+// ─── Diagnosis & Evidence Tab ───────────────────────────────────────────────────
+
+function DiagnosisTab({
+  wo, onViewFailureEvent,
+}: {
+  wo: WorkOrder;
+  onViewFailureEvent?: () => void;
+}) {
+  const faultTree = wo.asset_fault_id
+    ? mockFaultTrees.find(t => t.asset_fault_id === wo.asset_fault_id)
+    : null;
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <label className="text-xs font-semibold text-slate-500 block mb-2">Context & Source</label>
+        <p className="text-sm text-slate-600 leading-relaxed">
+          This Work Order was auto-generated from a Failure Event report. The information below provides the operational context and the FMEA path that led to this maintenance task.
+        </p>
+      </div>
+
+      {/* Linked Failure Event / FMEA Path */}
+      {faultTree ? (
+        <div className="border border-blue-200 bg-blue-50 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold text-slate-800 text-sm">FMEA Context</h4>
+              <p className="text-xs text-slate-500 mt-0.5">From RCA Investigation</p>
+            </div>
+            <GitBranch className="h-5 w-5 text-blue-600 shrink-0" />
+          </div>
+          <div className="grid grid-cols-1 gap-3 text-sm">
+            <div>
+              <span className="font-semibold text-blue-700">Failure Mode:</span>
+              <p className="text-slate-700 mt-0.5">{faultTree.asset_fault_name}</p>
+            </div>
+            <div>
+              <span className="font-semibold text-blue-700">Expression:</span>
+              <p className="text-slate-700 mt-0.5 font-mono text-xs bg-white rounded p-2">{faultTree.expression}</p>
+            </div>
+            {faultTree.sensor_codes.length > 0 && (
+              <div>
+                <span className="font-semibold text-blue-700">Sensor Inputs:</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {faultTree.sensor_codes.map(code => (
+                    <span key={code} className="px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs font-medium">{code}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          {onViewFailureEvent && (
+            <button
+              onClick={onViewFailureEvent}
+              className="w-full flex items-center justify-center gap-2 mt-3 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              <GitBranch className="h-3.5 w-3.5" /> View Original Failure Event
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="border border-slate-200 rounded-xl p-4 text-center text-slate-400 py-8">
+          <AlertCircle className="h-6 w-6 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">No linked Failure Event or FMEA context available.</p>
+        </div>
+      )}
+
+      {/* Evidence & Anomaly Data */}
+      <div>
+        <label className="text-xs font-semibold text-slate-500 block mb-2">Detected Anomaly</label>
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+          <p className="text-sm text-slate-700">{wo.description || "No anomaly data recorded."}</p>
+          {wo.started_at && (
+            <p className="text-xs text-slate-500">
+              <span className="font-semibold">First detected:</span> {wo.started_at}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Info Tab ───────────────────────────────────────────────────────────────────
 
 function InfoTab({
-  wo, onStatusChange, onViewRCA, readOnly, comments, onAddComment,
+  wo, onStatusChange, readOnly, comments, onAddComment,
 }: {
   wo: WorkOrder;
   onStatusChange: (s: WOStatus) => void;
-  onViewRCA?: () => void;
   readOnly: boolean;
   comments: WorkOrderComment[];
   onAddComment: (body: string) => void;
 }) {
   const pCfg = PRIORITY_CFG[wo.priority];
-  const faultTree = wo.asset_fault_id
-    ? mockFaultTrees.find(t => t.asset_fault_id === wo.asset_fault_id)
-    : null;
   const [draft, setDraft] = useState("");
 
   const fmtTime = (iso: string) => {
@@ -87,22 +166,6 @@ function InfoTab({
 
   return (
     <div className="space-y-5">
-      {/* RCA Cross-link */}
-      {faultTree && (
-        <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-xl">
-          <div className="flex items-center gap-2 text-sm text-blue-700">
-            <GitBranch className="h-4 w-4 shrink-0" />
-            <span>Linked RCA: <span className="font-semibold">{faultTree.asset_fault_name}</span></span>
-          </div>
-          <button
-            onClick={onViewRCA}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors shrink-0"
-          >
-            <GitBranch className="h-3.5 w-3.5" /> View RCA Investigation
-          </button>
-        </div>
-      )}
-
       {/* Status */}
       {!readOnly ? (
         <div>
@@ -694,12 +757,18 @@ export function WorkOrderDrawer({
   onUpdateActions, onUpdateTasks, onUpdateAssignments, onUpdateMaterials,
   onViewRCA,
 }: WorkOrderDrawerProps) {
-  const [tab, setTab] = useState<DrawerTab>("info");
+  const [tab, setTab] = useState<DrawerTab>("diagnosis");
   const [comments, setComments] = useState<WorkOrderComment[]>(
     mockWorkOrderComments.filter(c => c.work_order_id === wo.id)
   );
   const [pendingCancel, setPendingCancel] = useState(false);
   const readOnly = isReadOnly(wo.status);
+
+  // Filter data for this work order
+  const woActions = actions.filter(a => a.work_order_id === wo.id);
+  const woMats = materials.filter(m => m.work_order_id === wo.id);
+  const woAssignments = assignments.filter(a => a.work_order_id === wo.id);
+  const woTasks = tasks.filter(t => woActions.some(a => t.work_action_id === a.id));
 
   const pCfg = PRIORITY_CFG[wo.priority];
   const sCfg = STATUS_CFG[wo.status];
@@ -823,10 +892,11 @@ export function WorkOrderDrawer({
   };
 
   const TABS: { key: DrawerTab; label: string; count?: number }[] = [
-    { key: "info",        label: "Info" },
-    { key: "actions",     label: "Actions & Tasks", count: actions.length },
-    { key: "materials",   label: "Materials",        count: materials.length },
-    { key: "assignments", label: "Assignments",      count: assignments.length },
+    { key: "diagnosis", label: "Diagnosis & Evidence" },
+    { key: "info", label: "General Info" },
+    { key: "actions", label: "Actions & Tasks", count: woTasks.length },
+    { key: "materials", label: "Materials", count: woMats.length },
+    { key: "assignments", label: "Assignments", count: woAssignments.length },
   ];
 
   return (
@@ -888,11 +958,16 @@ export function WorkOrderDrawer({
 
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
+          {tab === "diagnosis" && (
+            <DiagnosisTab
+              wo={wo}
+              onViewFailureEvent={handleViewRCA}
+            />
+          )}
           {tab === "info" && (
             <InfoTab
               wo={wo}
               onStatusChange={handleStatusSelect}
-              onViewRCA={handleViewRCA}
               readOnly={readOnly}
               comments={comments}
               onAddComment={handleAddComment}
@@ -900,7 +975,7 @@ export function WorkOrderDrawer({
           )}
           {tab === "actions" && (
             <ActionsTab
-              wo={wo} actions={actions} tasks={tasks}
+              wo={wo} actions={woActions} tasks={woTasks}
               onAddAction={handleAddAction}
               onDeleteAction={handleDeleteAction}
               onUpdateActionStatus={handleActionStatus}
