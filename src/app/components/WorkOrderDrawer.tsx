@@ -764,6 +764,12 @@ export function WorkOrderDrawer({
   const [pendingCancel, setPendingCancel] = useState(false);
   const readOnly = isReadOnly(wo.status);
 
+  // Filter data for this work order
+  const woActions = actions.filter(a => a.work_order_id === wo.id);
+  const woMats = materials.filter(m => m.work_order_id === wo.id);
+  const woAssignments = assignments.filter(a => a.work_order_id === wo.id);
+  const woTasks = tasks.filter(t => woActions.some(a => t.work_action_id === a.id));
+
   const pCfg = PRIORITY_CFG[wo.priority];
   const sCfg = STATUS_CFG[wo.status];
 
@@ -888,7 +894,7 @@ export function WorkOrderDrawer({
   const TABS: { key: DrawerTab; label: string; count?: number }[] = [
     { key: "diagnosis", label: "Diagnosis & Evidence" },
     { key: "info", label: "General Info" },
-    { key: "actions", label: "Actions & Tasks", count: woActions.length },
+    { key: "actions", label: "Actions & Tasks", count: woTasks.length },
     { key: "materials", label: "Materials", count: woMats.length },
     { key: "assignments", label: "Assignments", count: woAssignments.length },
   ];
@@ -969,7 +975,7 @@ export function WorkOrderDrawer({
           )}
           {tab === "actions" && (
             <ActionsTab
-              wo={wo} actions={actions} tasks={tasks}
+              wo={wo} actions={woActions} tasks={woTasks}
               onAddAction={handleAddAction}
               onDeleteAction={handleDeleteAction}
               onUpdateActionStatus={handleActionStatus}
