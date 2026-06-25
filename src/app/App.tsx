@@ -14,6 +14,7 @@ import { AnomalyAlertCenter } from "./components/AnomalyAlertCenter";
 import { MLModelStudio } from "./components/MLModelStudio";
 import { FailureDictionaryAdmin } from "./components/FailureDictionaryAdmin";
 import { FailureEvents } from "./components/FailureEvents";
+import { RotopowerChat } from "./components/RotopowerChat";
 import { AppSidebar } from "./components/AppSidebar";
 import { TopNavigation, Region, Site, GlobalContext } from "./components/TopNavigation";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "./components/ui/sidebar";
@@ -333,6 +334,8 @@ export default function App() {
         return "Failure Dictionary Admin";
       case "failure-events":
         return "Failure Events";
+      case "rotopower-chat":
+        return "Rotopower Chat";
       default:
         if (currentPage.startsWith("rcfa-canvas-")) return "Fault Tree Editor";
         return "CMMS";
@@ -453,10 +456,22 @@ export default function App() {
                 onBack={() => setCurrentPage("root-cause-analysis")}
               />
             </div>
+          ) : currentPage === "rotopower-chat" ? (
+            <div className="flex-1 h-full overflow-hidden bg-slate-50 flex items-center justify-center">
+              <div className="text-center">
+                <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="h-8 w-8 text-blue-600" />
+                </div>
+                <h2 className="text-2xl font-semibold text-slate-900 mb-2">Rotopower Chat</h2>
+                <p className="text-slate-600 mb-6">Click the sparkle icon in the bottom-right corner to start chatting with the AI assistant.</p>
+                <p className="text-sm text-slate-500">The floating chat drawer is available from any page in the application.</p>
+              </div>
+            </div>
           ) : null}
         </div>
 
         <Toaster />
+        <RotopowerChat />
       </SidebarInset>
     </SidebarProvider>
   );
