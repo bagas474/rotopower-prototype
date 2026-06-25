@@ -1,116 +1,86 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Plus, Copy, Check, Sparkles } from 'lucide-react';
+import { Send, Plus, Copy, Check, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
-
-interface ChatMessage {
-  id: number;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  created_at: string;
-}
-
-interface ChatSession {
-  id: number;
-  title: string;
-  created_at: string;
-  messages: ChatMessage[];
-}
-
-// Demo data - in production, this would come from the backend
-const DEMO_SESSIONS: ChatSession[] = [
-  {
-    id: 1,
-    title: 'Troubleshooting Pump VIB',
-    created_at: '2024-01-15 10:00',
-    messages: [
-      { id: 1, role: 'user', content: 'Why is the vibration high on pump BFP-01?', created_at: '10:00 AM' },
-      { id: 2, role: 'assistant', content: 'High vibration on BFP-01 typically indicates **bearing wear** or **imbalance**. Check:\n\n1. Bearing condition (lubrication level)\n2. Pump alignment\n3. Impeller balance\n\nRefer to the maintenance manual section 3.2 for detailed inspection steps.', created_at: '10:01 AM' },
-    ],
-  },
-];
-
-const SUGGESTED_PROMPTS = [
-  'Analyze latest anomalies',
-  'Find pump maintenance manual',
-  'Explain high vibration readings',
-];
+import { ChatSession, ChatMessage, mockChatSessions, mockChatMessages } from '../data/mockData';
 
 export function RotopowerChat() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [sessions, setSessions] = useState<ChatSession[]>(DEMO_SESSIONS);
-  const [currentSessionId, setCurrentSessionId] = useState<number | null>(1);
+  const [sessions, setSessions] = useState<ChatSession[]>(mockChatSessions);
+  const [messages, setMessages] = useState<ChatMessage[]>(mockChatMessages);
+  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(204);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const currentSession = sessions.find(s => s.id === currentSessionId);
+  const selectedSession = sessions.find(s => s.id === selectedSessionId);
+  const sessionMessages = messages.filter(m => m.session_id === selectedSessionId).sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentSession?.messages]);
+  }, [sessionMessages, isStreaming]);
 
-  const handleNewSession = () => {
-    const newId = Math.max(...sessions.map(s => s.id), 0) + 1;
+  const handleNewChat = () => {
+    const newSessionId = Math.max(...sessions.map(s => s.id), 0) + 1;
     const newSession: ChatSession = {
-      id: newId,
-      title: 'New Chat',
-      created_at: new Date().toLocaleString(),
-      messages: [],
+      id: newSessionId,
+      site_id: 1,
+      user_id: 1,
+      title: 'New Conversation',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
-    setSessions([...sessions, newSession]);
-    setCurrentSessionId(newId);
+    setSessions(prev => [newSession, ...prev]);
+    setSelectedSessionId(newSessionId);
+    setInputValue('');
   };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
-    if (!currentSession) return;
+    if (!selectedSessionId) return;
 
     const userMessage: ChatMessage = {
-      id: Date.now(),
-      role: 'user',
+      id: Math.max(...messages.map(m => m.id), 0) + 1,
+      session_id: selectedSessionId,
+      role: 'USER',
       content: inputValue.trim(),
-      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
-    setSessions(sessions.map(s =>
-      s.id === currentSessionId
-        ? { ...s, messages: [...s.messages, userMessage] }
-        : s
-    ));
-
+    setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsStreaming(true);
 
-    // Simulate streaming response with typing indicator
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // Update session timestamp
+    setSessions(prev =>
+      prev.map(s =>
+        s.id === selectedSessionId
+          ? { ...s, updated_at: new Date().toISOString() }
+          : s
+      )
+    );
 
-    const assistantMessage: ChatMessage = {
-      id: Date.now() + 1,
-      role: 'assistant',
-      content: 'This is a simulated response from the AI assistant. In production, this would stream from the backend API using Server-Sent Events.',
-      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setSessions(sessions.map(s =>
-      s.id === currentSessionId
-        ? { ...s, messages: [...s.messages, assistantMessage] }
-        : s
-    ));
-
-    setIsStreaming(false);
-  };
-
-  const handleCopyMessage = (content: string, messageId: number) => {
-    navigator.clipboard.writeText(content);
-    setCopiedId(messageId);
-    setTimeout(() => setCopiedId(null), 2000);
-    toast.success('Copied to clipboard');
+    // Simulate streaming response
+    setTimeout(() => {
+      const assistantMessage: ChatMessage = {
+        id: userMessage.id + 1,
+        session_id: selectedSessionId,
+        role: 'ASSISTANT',
+        content: `Based on your question about "${inputValue.trim()}", here are the key considerations:\n\n- **Primary factor**: Equipment condition and operational history\n- **Secondary factor**: Environmental conditions and maintenance schedule\n- **Recommended action**: Consult equipment manual and manufacturer guidelines\n\nWould you like more specific information?`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsStreaming(false);
+    }, 1500);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -120,173 +90,196 @@ export function RotopowerChat() {
     }
   };
 
+  const copyToClipboard = (content: string, id: number) => {
+    navigator.clipboard.writeText(content);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+    toast.success('Copied to clipboard');
+  };
+
+  const formatTime = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const suggestedPrompts = [
+    'Analyze latest anomalies',
+    'Find pump maintenance manuals',
+    'What does high vibration mean?'
+  ];
+
   return (
-    <>
-      {/* Floating Action Button */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center justify-center z-40 transition-all duration-300 hover:scale-110"
-          aria-label="Open AI Chat"
-        >
-          <Sparkles className="h-6 w-6" />
-        </button>
-      )}
-
-      {/* Chat Drawer */}
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setIsOpen(false)}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300"
-          />
-
-          {/* Drawer */}
-          <div
-            className="fixed right-0 top-0 h-screen w-[30%] max-w-md bg-white shadow-xl rounded-l-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-right-full duration-300"
+    <div className="flex h-full bg-white">
+      {/* Left Pane: Session List */}
+      <div className="w-80 border-r border-slate-200 flex flex-col bg-slate-50">
+        <div className="p-4 border-b border-slate-200">
+          <button
+            onClick={handleNewChat}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
           >
-            {/* Header */}
-            <div className="border-b border-slate-200 p-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-slate-50">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-slate-900 text-sm">Rotopower AI</h2>
-                  <p className="text-xs text-slate-500">Assistant</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-slate-200 rounded-lg transition-colors text-slate-600"
-                aria-label="Close chat"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+            <Plus className="h-4 w-4" /> New Chat
+          </button>
+        </div>
 
-            {/* Chat Container */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Session List & Messages Area */}
-              {currentSession && currentSession.messages.length === 0 ? (
-                // Empty State
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                  <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-                    <Sparkles className="h-8 w-8 text-blue-600" />
+        <div className="flex-1 overflow-y-auto">
+          {sessions.length === 0 ? (
+            <div className="p-4 text-center text-slate-400 text-sm">
+              No conversations yet
+            </div>
+          ) : (
+            <div className="space-y-2 p-2">
+              {sessions.map(session => (
+                <button
+                  key={session.id}
+                  onClick={() => setSelectedSessionId(session.id)}
+                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                    selectedSessionId === session.id
+                      ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                      : 'hover:bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  <div className="font-medium text-sm truncate">{session.title}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    {new Date(session.updated_at).toLocaleDateString()}
                   </div>
-                  <h3 className="font-semibold text-slate-900 mb-1">Start a Conversation</h3>
-                  <p className="text-xs text-slate-500 mb-6">Ask about equipment maintenance, troubleshooting, or operational guidance</p>
-                  <div className="space-y-2 w-full">
-                    {SUGGESTED_PROMPTS.map((prompt, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          setInputValue(prompt);
-                        }}
-                        className="w-full px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium border border-blue-200 transition-colors text-left"
-                      >
-                        ✨ {prompt}
-                      </button>
-                    ))}
-                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right Pane: Chat Interface */}
+      <div className="flex-1 flex flex-col">
+        {!selectedSession ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
+            <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+              <Sparkles className="h-8 w-8 text-blue-600" />
+            </div>
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold text-slate-900 mb-2">Welcome to Rotopower AI</h2>
+              <p className="text-slate-600 mb-6 max-w-md">
+                Ask questions about equipment maintenance, troubleshooting, and operational best practices.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              {suggestedPrompts.map((prompt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    if (!selectedSessionId) handleNewChat();
+                    setInputValue(prompt);
+                  }}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Message Area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {sessionMessages.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-slate-400">
+                  <p>Start a conversation by typing a message below.</p>
                 </div>
               ) : (
-                // Messages
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {currentSession?.messages.map(msg => (
+                sessionMessages.map(msg => (
+                  <div
+                    key={msg.id}
+                    className={`flex gap-3 ${msg.role === 'USER' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {msg.role === 'ASSISTANT' && (
+                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <Sparkles className="h-4 w-4 text-blue-600" />
+                      </div>
+                    )}
                     <div
-                      key={msg.id}
-                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-200`}
+                      className={`max-w-2xl rounded-lg p-3 ${
+                        msg.role === 'USER'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-900 group relative'
+                      }`}
                     >
+                      {msg.role === 'ASSISTANT' ? (
+                        <div className="prose prose-sm max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="text-sm">{msg.content}</p>
+                      )}
                       <div
-                        className={`max-w-xs rounded-lg px-4 py-3 ${
-                          msg.role === 'user'
-                            ? 'bg-blue-600 text-white rounded-br-none'
-                            : 'bg-slate-100 text-slate-900 rounded-bl-none group relative'
+                        className={`text-xs mt-1 ${
+                          msg.role === 'USER' ? 'text-blue-100' : 'text-slate-500'
                         }`}
                       >
-                        {msg.role === 'assistant' ? (
-                          <>
-                            <div className="prose prose-sm max-w-none prose-p:m-0 prose-p:text-sm prose-headings:text-sm prose-headings:font-semibold prose-ul:my-2 prose-li:my-0 prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded">
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {msg.content}
-                              </ReactMarkdown>
-                            </div>
-                            <button
-                              onClick={() => handleCopyMessage(msg.content, msg.id)}
-                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-slate-200 rounded transition-all"
-                              aria-label="Copy message"
-                            >
-                              {copiedId === msg.id ? (
-                                <Check className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <Copy className="h-4 w-4 text-slate-600" />
-                              )}
-                            </button>
-                          </>
+                        {formatTime(msg.created_at)}
+                      </div>
+                    </div>
+                    {msg.role === 'ASSISTANT' && (
+                      <button
+                        onClick={() => copyToClipboard(msg.content, msg.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 transition-all"
+                        title="Copy message"
+                      >
+                        {copiedId === msg.id ? (
+                          <Check className="h-4 w-4 text-green-500" />
                         ) : (
-                          <p className="text-sm">{msg.content}</p>
+                          <Copy className="h-4 w-4" />
                         )}
-                        <p className={`text-xs mt-1.5 ${msg.role === 'user' ? 'text-blue-100' : 'text-slate-500'}`}>
-                          {msg.created_at}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
 
-                  {/* Typing Indicator */}
-                  {isStreaming && (
-                    <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <div className="bg-slate-100 rounded-lg rounded-bl-none px-4 py-3 flex gap-1">
-                        <div className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
-                        <div className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0.1s' }} />
-                        <div className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
-                      </div>
+              {isStreaming && (
+                <div className="flex gap-3 justify-start">
+                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="bg-slate-100 rounded-lg p-3">
+                    <div className="flex gap-1">
+                      <div className="h-2 w-2 bg-slate-400 rounded-full animate-bounce" />
+                      <div className="h-2 w-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                      <div className="h-2 w-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                     </div>
-                  )}
-
-                  <div ref={messagesEndRef} />
+                  </div>
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input Area */}
-            <div className="border-t border-slate-200 p-4 bg-slate-50 space-y-3">
-              <div className="flex gap-2">
-                <button
-                  onClick={handleNewSession}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors"
-                  aria-label="Start new chat"
-                >
-                  <Plus className="h-4 w-4" />
-                  New Chat
-                </button>
-              </div>
-
+            <div className="border-t border-slate-200 p-4 bg-slate-50">
               <div className="flex gap-2">
                 <textarea
+                  ref={textareaRef}
                   value={inputValue}
                   onChange={e => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask anything... (Shift + Enter for new line)"
+                  placeholder="Ask about equipment maintenance, troubleshooting... (Enter to send, Shift+Enter for new line)"
                   rows={3}
-                  className="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                  className="flex-1 resize-none border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   disabled={isStreaming}
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!inputValue.trim() || isStreaming}
-                  className="flex items-center justify-center h-full px-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
-                  aria-label="Send message"
+                  className="h-full px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg flex items-center justify-center transition-colors"
+                  title="Send message (Enter)"
                 >
                   <Send className="h-4 w-4" />
                 </button>
               </div>
             </div>
-          </div>
-        </>
-      )}
-    </>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

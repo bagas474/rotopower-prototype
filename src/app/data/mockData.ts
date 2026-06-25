@@ -822,3 +822,88 @@ export const mockRoleRequirements: Record<number, RoleCompetenceRequirement[]> =
     { role_id: 1, competence_id: 44, competence_name: "Troubleshooting", min_level: 4 }
   ]
 };
+
+// Chat Types
+export type ChatRole = "USER" | "ASSISTANT" | "SYSTEM";
+
+export interface ChatSession {
+  id: number;
+  site_id: number;
+  user_id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  session_id: number;
+  role: ChatRole;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Mock Chat Sessions
+export const mockChatSessions: ChatSession[] = [
+  {
+    id: 204,
+    site_id: 1,
+    user_id: 1,
+    title: "Troubleshooting Pump Vibration",
+    created_at: "2024-05-21T10:00:00",
+    updated_at: "2024-05-21T14:30:00"
+  },
+  {
+    id: 203,
+    site_id: 1,
+    user_id: 1,
+    title: "Anti-Surge Valve Maintenance",
+    created_at: "2024-05-20T09:15:00",
+    updated_at: "2024-05-20T14:45:00"
+  },
+  {
+    id: 202,
+    site_id: 1,
+    user_id: 1,
+    title: "Bearing Wear Analysis",
+    created_at: "2024-05-18T11:20:00",
+    updated_at: "2024-05-18T16:10:00"
+  }
+];
+
+// Mock Chat Messages
+export const mockChatMessages: ChatMessage[] = [
+  {
+    id: 1054,
+    session_id: 204,
+    role: "USER",
+    content: "Why is the vibration on P-101 increasing?",
+    created_at: "2024-05-21T14:15:00",
+    updated_at: "2024-05-21T14:15:00"
+  },
+  {
+    id: 1055,
+    session_id: 204,
+    role: "ASSISTANT",
+    content: "High vibration on **P-101 (Cooling Water Pump)** typically indicates:\n\n1. **Bearing wear** - Most common cause. Inspect for play in radial/axial directions.\n2. **Imbalance** - Check rotor balance. Dynamic balancing may be required.\n3. **Misalignment** - Verify coupling alignment between motor and pump.\n4. **Cavitation** - Confirm suction head is adequate.\n\nRecommend immediate diagnostic: take vibration signatures in vertical/horizontal/axial directions.",
+    created_at: "2024-05-21T14:20:00",
+    updated_at: "2024-05-21T14:20:00"
+  },
+  {
+    id: 1056,
+    session_id: 204,
+    role: "USER",
+    content: "What's the normal range for pump vibration?",
+    created_at: "2024-05-21T14:25:00",
+    updated_at: "2024-05-21T14:25:00"
+  },
+  {
+    id: 1057,
+    session_id: 204,
+    role: "ASSISTANT",
+    content: "## ISO 10816-3 Vibration Standards (for 15-75 kW machines)\n\n| Zone | Velocity (mm/s) | Condition |\n|------|-----------------|----------|\n| A | 0-1.8 | Good |\n| B | 1.8-4.5 | Acceptable |\n| C | 4.5-11.2 | Tolerable (short-term) |\n| D | >11.2 | Unacceptable |\n\nFor **P-101**: Target < 2.0 mm/s RMS. Values >7.0 mm/s require immediate investigation.",
+    created_at: "2024-05-21T14:30:00",
+    updated_at: "2024-05-21T14:30:00"
+  }
+];
