@@ -1,4 +1,4 @@
-import { Users, Wrench, Calendar, Package, Shield, Award, Briefcase, GitBranch, ClipboardList, Activity, AlertCircle, Brain, BookMarked, Inbox } from "lucide-react";
+import { Users, Wrench, Calendar, Package, Shield, Award, Briefcase, GitBranch, ClipboardList, Activity, AlertCircle, Brain, BookMarked, Inbox, Sparkles } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -165,6 +165,23 @@ export function AppSidebar({ currentPage = "worker-profiles", onNavigate }: AppS
                 >
                   <Award className="h-4 w-4" />
                   <span>Competency Dictionary</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>AI Copilot</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "rotopower-chat"}
+                  onClick={() => onNavigate?.("rotopower-chat")}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>Rotopower Chat</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

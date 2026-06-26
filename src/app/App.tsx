@@ -14,6 +14,7 @@ import { AnomalyAlertCenter } from "./components/AnomalyAlertCenter";
 import { MLModelStudio } from "./components/MLModelStudio";
 import { FailureDictionaryAdmin } from "./components/FailureDictionaryAdmin";
 import { FailureEvents } from "./components/FailureEvents";
+import { RotopowerChat } from "./components/RotopowerChat";
 import { AppSidebar } from "./components/AppSidebar";
 import { TopNavigation, Region, Site, GlobalContext } from "./components/TopNavigation";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "./components/ui/sidebar";
@@ -333,6 +334,8 @@ export default function App() {
         return "Failure Dictionary Admin";
       case "failure-events":
         return "Failure Events";
+      case "rotopower-chat":
+        return "Rotopower Chat";
       default:
         if (currentPage.startsWith("rcfa-canvas-")) return "Fault Tree Editor";
         return "CMMS";
@@ -452,6 +455,10 @@ export default function App() {
                 isAdmin={currentUser.is_admin}
                 onBack={() => setCurrentPage("root-cause-analysis")}
               />
+            </div>
+          ) : currentPage === "rotopower-chat" ? (
+            <div className="flex-1 h-full overflow-hidden">
+              <RotopowerChat />
             </div>
           ) : null}
         </div>
